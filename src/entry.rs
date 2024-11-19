@@ -53,8 +53,11 @@ impl Entry {
             .flatten()
             .filter_map(|dir_entry| {
                 let path = dir_entry.path();
-                (path.is_dir() || path.extension().is_some_and(|ext| ext == "sl2"))
-                    .then(|| Rc::new(RefCell::new(Entry::new(path, depth).unwrap())))
+                (path.is_dir()
+                    || path
+                        .file_name()
+                        .is_some_and(|file_name| file_name != "selected_save_file"))
+                .then(|| Rc::new(RefCell::new(Entry::new(path, depth).unwrap())))
             })
             .collect())
     }
