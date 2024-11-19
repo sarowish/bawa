@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -141,6 +141,10 @@ impl Input {
 }
 
 pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
+    if key.kind == KeyEventKind::Release {
+        return false;
+    }
+
     match app.input_mode {
         InputMode::Normal => return handle_key_normal_mode(key, app),
         InputMode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
