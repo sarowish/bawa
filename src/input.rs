@@ -1,18 +1,33 @@
+use crate::app::App;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use crate::app::{App, StatefulList};
-
 #[derive(Debug)]
 pub enum InputMode {
     Normal,
-    Confirmation,
+    Confirmation(ConfirmationContext),
     EntryRenaming,
     ProfileSelection,
     ProfileCreation,
     ProfileRenaming,
     FolderCreation(bool),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ConfirmationContext {
+    Deletion,
+    Replacing,
+    ProfileDeletion,
+}
+
+impl ConfirmationContext {
+    pub fn previous_input_mode(self) -> InputMode {
+        match self {
+            ConfirmationContext::Deletion | ConfirmationContext::Replacing => InputMode::Normal,
+            ConfirmationContext::ProfileDeletion => InputMode::ProfileSelection,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -148,7 +163,7 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
     match app.input_mode {
         InputMode::Normal => return handle_key_normal_mode(key, app),
         InputMode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
-        InputMode::Confirmation => handle_key_confirmation_mode(key, app),
+        InputMode::Confirmation(context) => handle_key_confirmation_mode(key, app, context),
         _ => handle_key_editing_mode(key, app),
     }
 
@@ -169,8 +184,8 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
         KeyCode::Char('f') => app.load_selected_save_file(),
         KeyCode::Char('i') => app.import_save_file(false),
         KeyCode::Char('I') => app.import_save_file(true),
-        KeyCode::Char('r') => app.replace_save_file(),
-        KeyCode::Char('d') => app.prompt_for_deletion(),
+        KeyCode::Char('r') => app.prompt_for_confirmation(ConfirmationContext::Replacing),
+        KeyCode::Char('d') => app.prompt_for_confirmation(ConfirmationContext::Deletion),
         KeyCode::Char('c') => app.take_input(InputMode::FolderCreation(false)),
         KeyCode::Char('C') => app.take_input(InputMode::FolderCreation(true)),
         KeyCode::Char('s') => app.enter_renaming(),
@@ -207,11 +222,7 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
                         Some(Input::with_text(&profiles.get_selected().unwrap().name));
                 }
                 KeyCode::Char('d') => {
-                    app.profiles.delete_selected_profile();
-
-                    if app.profiles.get_profile().is_none() {
-                        app.visible_entries = StatefulList::with_items(Vec::new());
-                    }
+                    app.prompt_for_confirmation(ConfirmationContext::ProfileDeletion);
                 }
                 _ => {}
             }
@@ -221,10 +232,10 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
     false
 }
 
-fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App) {
+fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App, context: ConfirmationContext) {
     match key.code {
-        KeyCode::Char('y') => app.delete_selected_entry(),
-        KeyCode::Char('n') => app.input_mode = InputMode::Normal,
+        KeyCode::Char('y') => app.on_confirmation(context),
+        KeyCode::Char('n') => app.input_mode = context.previous_input_mode(),
         _ => (),
     }
 }

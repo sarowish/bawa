@@ -1,6 +1,6 @@
 use crate::{
     entry::Entry,
-    input::{Input, InputMode},
+    input::{ConfirmationContext, Input, InputMode},
     profile::Profiles,
     utils, OPTIONS,
 };
@@ -51,10 +51,37 @@ impl App {
         }
     }
 
-    pub fn prompt_for_deletion(&mut self) {
-        if self.visible_entries.state.selected().is_some() {
-            self.input_mode = InputMode::Confirmation;
+    pub fn on_confirmation(&mut self, context: ConfirmationContext) {
+        match context {
+            ConfirmationContext::Deletion => self.delete_selected_entry(),
+            ConfirmationContext::Replacing => self.replace_save_file(),
+            ConfirmationContext::ProfileDeletion => {
+                self.profiles.delete_selected_profile();
+
+                if self.profiles.get_profile().is_none() {
+                    self.visible_entries = StatefulList::with_items(Vec::new());
+                }
+
+                self.input_mode = InputMode::ProfileSelection;
+            }
         }
+    }
+
+    pub fn prompt_for_confirmation(&mut self, context: ConfirmationContext) {
+        match context {
+            ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
+                if self.visible_entries.state.selected().is_none() {
+                    return;
+                }
+            }
+            ConfirmationContext::ProfileDeletion => {
+                if self.profiles.profiles.state.selected().is_none() {
+                    return;
+                }
+            }
+        }
+
+        self.input_mode = InputMode::Confirmation(context);
     }
 
     pub fn delete_selected_entry(&mut self) {
@@ -527,6 +554,8 @@ impl App {
                 std::fs::copy(&OPTIONS.save_file_path, entry.borrow().path()).unwrap();
             }
         }
+
+        self.input_mode = InputMode::Normal;
     }
 }
 
