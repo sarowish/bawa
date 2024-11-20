@@ -105,7 +105,12 @@ impl App {
     pub fn create_folder(&mut self) {
         let text = std::mem::take(&mut self.footer_input.as_mut().unwrap().text);
 
-        if let InputMode::FolderCreation(true) = self.input_mode {
+        if matches!(self.input_mode, InputMode::FolderCreation(true))
+            || !self
+                .visible_entries
+                .get_selected()
+                .is_some_and(|entry| !(entry.borrow().depth() == 0 && entry.borrow().is_file()))
+        {
             let profile = self.profiles.get_mut_profile().unwrap();
             let path = profile.path.join(text);
 
@@ -469,35 +474,45 @@ impl App {
         }
     }
 
-    pub fn import_save_file(&mut self) {
-        let Some(selected_idx) = self.visible_entries.state.selected() else {
-            return;
-        };
+    pub fn import_save_file(&mut self, top_level: bool) {
+        let save_file_path = OPTIONS.save_file_path.clone();
 
-        let idx = self.find_context(selected_idx).unwrap();
-
-        self.close_fold_at_index(idx);
-
-        // get_mut_selected doesn't work if trying to get parent
-        if let Some(entry) = self.visible_entries.items.get_mut(idx) {
-            let save_file_path = OPTIONS.save_file_path.clone();
-            let mut path = entry
-                .borrow()
-                .path()
-                .join(save_file_path.file_name().unwrap());
+        if top_level
+            || !self
+                .visible_entries
+                .get_selected()
+                .is_some_and(|entry| !(entry.borrow().depth() == 0 && entry.borrow().is_file()))
+        {
+            let profile = self.profiles.get_mut_profile().unwrap();
+            let mut path = profile.path.join(save_file_path.file_name().unwrap());
             utils::verify_name(&mut path);
-            let depth = entry.borrow().depth();
 
             std::fs::copy(&save_file_path, &path).unwrap();
-
-            let child = Rc::new(RefCell::new(Entry::new(path, depth + 1).unwrap()));
-
-            entry.borrow_mut().insert_to_folder(child);
+            let entry = Rc::new(RefCell::new(Entry::new(path, 0).unwrap()));
+            profile.entries.push(entry.clone());
+            self.visible_entries.items.push(entry);
         } else {
-            return;
-        };
+            let Some(selected_idx) = self.visible_entries.state.selected() else {
+                return;
+            };
+            let idx = self.find_context(selected_idx).unwrap();
+            self.close_fold_at_index(idx);
 
-        self.open_fold_at_index(idx);
+            if let Some(entry) = self.visible_entries.items.get_mut(idx) {
+                let mut path = entry
+                    .borrow()
+                    .path()
+                    .join(save_file_path.file_name().unwrap());
+                utils::verify_name(&mut path);
+                let depth = entry.borrow().depth();
+
+                std::fs::copy(&save_file_path, &path).unwrap();
+                let child = Rc::new(RefCell::new(Entry::new(path, depth + 1).unwrap()));
+                entry.borrow_mut().insert_to_folder(child);
+            }
+
+            self.open_fold_at_index(idx);
+        }
     }
 
     pub fn replace_save_file(&mut self) {
