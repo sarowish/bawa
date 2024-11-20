@@ -380,6 +380,10 @@ impl App {
 
     pub fn on_up(&mut self) {
         self.visible_entries.previous();
+
+        if OPTIONS.auto_mark_save_file {
+            self.mark_selected_save_file();
+        }
     }
     pub fn on_right(&mut self) {
         if let Some(idx) = self.visible_entries.state.selected() {
@@ -389,10 +393,26 @@ impl App {
 
     pub fn on_down(&mut self) {
         self.visible_entries.next();
+
+        if OPTIONS.auto_mark_save_file {
+            self.mark_selected_save_file();
+        }
     }
 
     pub fn select_first(&mut self) {
         self.visible_entries.select_first();
+
+        if OPTIONS.auto_mark_save_file {
+            self.mark_selected_save_file();
+        }
+    }
+
+    pub fn select_last(&mut self) {
+        self.visible_entries.select_last();
+
+        if OPTIONS.auto_mark_save_file {
+            self.mark_selected_save_file();
+        }
     }
 
     pub fn up_directory(&mut self) {
@@ -478,14 +498,19 @@ impl App {
         self.visible_entries.select_with_index(idx);
     }
 
-    pub fn select_last(&mut self) {
-        self.visible_entries.select_last();
-    }
-
     pub fn load_selected_save_file(&self) {
         if let Some(entry) = self.visible_entries.get_selected() {
             if let Entry::File { ref path, .. } = *entry.borrow() {
                 self.load_save_file(path);
+            }
+        }
+    }
+
+    pub fn mark_selected_save_file(&self) {
+        if let Some(entry) = self.visible_entries.get_selected() {
+            if let Entry::File { ref path, .. } = *entry.borrow() {
+                let profile = self.profiles.get_profile().unwrap();
+                profile.update_selected_save_file(path).unwrap();
             }
         }
     }

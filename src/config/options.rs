@@ -10,10 +10,12 @@ use std::{
 #[derive(Deserialize)]
 pub struct UserOptions {
     save_file_path: Option<PathBuf>,
+    auto_mark_save_file: Option<bool>,
 }
 
 pub struct Options {
     pub save_file_path: PathBuf,
+    pub auto_mark_save_file: bool,
 }
 
 impl Options {
@@ -28,6 +30,7 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             save_file_path: PathBuf::new(),
+            auto_mark_save_file: false,
         }
     }
 }
@@ -45,6 +48,7 @@ impl From<UserOptions> for Options {
         }
 
         set_options_field!(save_file_path);
+        set_options_field!(auto_mark_save_file);
 
         options
     }

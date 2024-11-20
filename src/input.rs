@@ -182,6 +182,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
         KeyCode::Char('G') => app.select_last(),
         KeyCode::Char('p') => app.jump_to_parent(),
         KeyCode::Char('f') => app.load_selected_save_file(),
+        KeyCode::Char('F') => app.mark_selected_save_file(),
         KeyCode::Char('i') => app.import_save_file(false),
         KeyCode::Char('I') => app.import_save_file(true),
         KeyCode::Char('r') => app.prompt_for_confirmation(ConfirmationContext::Replacing),
