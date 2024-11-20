@@ -62,6 +62,14 @@ impl Entry {
             .collect())
     }
 
+    pub fn entries(&self) -> &Vec<Rc<RefCell<Entry>>> {
+        if let Self::Folder { entries, .. } = self {
+            entries
+        } else {
+            panic!();
+        }
+    }
+
     pub fn entries_mut(&mut self) -> &mut Vec<Rc<RefCell<Entry>>> {
         if let Self::Folder { entries, .. } = self {
             entries

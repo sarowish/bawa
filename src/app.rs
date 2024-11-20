@@ -58,30 +58,36 @@ impl App {
     }
 
     pub fn delete_selected_entry(&mut self) {
-        let Some(entry) = self.visible_entries.get_selected() else {
+        let Some(selected_entry) = self.visible_entries.get_selected() else {
             return;
         };
 
-        let idx = self.visible_entries.state.selected().unwrap();
-        let parent_idx = self.find_parent(idx);
-
-        if entry.borrow().is_folder() {
-            std::fs::remove_dir_all(entry.borrow().path()).unwrap();
+        if selected_entry.borrow().is_folder() {
+            std::fs::remove_dir_all(selected_entry.borrow().path()).unwrap();
         } else {
-            std::fs::remove_file(entry.borrow().path()).unwrap();
+            std::fs::remove_file(selected_entry.borrow().path()).unwrap();
         }
 
-        if let Some(parent_idx) = parent_idx {
+        let idx = self.visible_entries.state.selected().unwrap();
+
+        if let Some(parent_idx) = self.find_parent(idx) {
+            let idx = self.visible_entries.items[parent_idx]
+                .borrow()
+                .entries()
+                .iter()
+                .position(|entry| Rc::ptr_eq(entry, selected_entry))
+                .unwrap();
+
             self.close_fold_at_index(parent_idx);
-            let parent = &self.visible_entries.items[parent_idx];
-            parent
+
+            self.visible_entries.items[parent_idx]
                 .borrow_mut()
                 .entries_mut()
-                .remove(idx - parent_idx - 1);
+                .remove(idx);
 
             self.open_fold_at_index(parent_idx);
         } else {
-            if entry.borrow().is_folder() {
+            if selected_entry.borrow().is_folder() {
                 self.close_fold_at_index(idx);
             }
 
