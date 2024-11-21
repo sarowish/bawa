@@ -6,7 +6,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::utils;
+use crate::{utils, OPTIONS};
 
 #[derive(Debug)]
 pub enum Entry {
@@ -28,9 +28,11 @@ pub enum Entry {
 
 impl Entry {
     pub fn new(path: PathBuf, depth: usize) -> Result<Self> {
+        let name = set_name_helper(&path);
+
         Ok(if path.is_file() {
             Self::File {
-                name: path.file_stem().unwrap().to_string_lossy().to_string(),
+                name,
                 path,
                 depth,
                 last_item: false,
@@ -38,7 +40,7 @@ impl Entry {
         } else {
             Self::Folder {
                 entries: Self::entries_from_path(&path, depth + 1)?,
-                name: path.file_name().unwrap().to_string_lossy().to_string(),
+                name,
                 path,
                 is_fold_opened: false,
                 depth,
@@ -125,7 +127,7 @@ impl Entry {
         match self {
             Entry::File { name, path, .. } | Entry::Folder { name, path, .. } => {
                 *path = utils::rename(path, new_name)?;
-                *name = path.file_stem().unwrap().to_string_lossy().to_string();
+                *name = set_name_helper(path);
                 self.update_children_path();
             }
         }
@@ -150,6 +152,15 @@ impl Entry {
     pub fn name(&self) -> String {
         match self {
             Entry::File { name, .. } | Entry::Folder { name, .. } => name,
+        }
+        .clone()
+    }
+
+    pub fn file_name(&self) -> String {
+        match self {
+            Entry::File { path, .. } | Entry::Folder { path, .. } => {
+                path.file_name().unwrap().to_string_lossy().to_string()
+            }
         }
         .clone()
     }
@@ -222,4 +233,14 @@ impl Entry {
             Span::raw(self.name()),
         ]
     }
+}
+
+fn set_name_helper(path: &Path) -> String {
+    let name = if OPTIONS.hide_extensions {
+        path.file_stem()
+    } else {
+        path.file_name()
+    };
+
+    name.unwrap().to_string_lossy().to_string()
 }

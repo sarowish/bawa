@@ -11,11 +11,13 @@ use std::{
 pub struct UserOptions {
     save_file_path: Option<PathBuf>,
     auto_mark_save_file: Option<bool>,
+    hide_extensions: Option<bool>,
 }
 
 pub struct Options {
     pub save_file_path: PathBuf,
     pub auto_mark_save_file: bool,
+    pub hide_extensions: bool,
 }
 
 impl Options {
@@ -31,6 +33,7 @@ impl Default for Options {
         Options {
             save_file_path: PathBuf::new(),
             auto_mark_save_file: false,
+            hide_extensions: false,
         }
     }
 }
@@ -49,6 +52,7 @@ impl From<UserOptions> for Options {
 
         set_options_field!(save_file_path);
         set_options_field!(auto_mark_save_file);
+        set_options_field!(hide_extensions);
 
         options
     }

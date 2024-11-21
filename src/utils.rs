@@ -31,8 +31,8 @@ pub fn get_config_dir() -> Result<PathBuf> {
 pub fn verify_name(path: &mut PathBuf) {
     while path.exists() {
         path.set_file_name(format!(
-            "{} (dup).sl2",
-            path.file_stem().unwrap().to_string_lossy()
+            "{} (dup)",
+            path.file_name().unwrap().to_string_lossy()
         ));
     }
 }
@@ -46,7 +46,6 @@ pub fn rename(from: &Path, to: &str) -> Result<PathBuf> {
     new_path.set_file_name(to);
 
     if from.is_file() {
-        new_path.set_extension("sl2");
         verify_name(&mut new_path);
     }
 

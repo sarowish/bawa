@@ -180,7 +180,7 @@ impl App {
         };
 
         self.input_mode = InputMode::EntryRenaming;
-        self.footer_input = Some(Input::with_text(&entry.borrow().name()));
+        self.footer_input = Some(Input::with_text(&entry.borrow().file_name()));
     }
 
     pub fn rename_selected_entry(&mut self) {
