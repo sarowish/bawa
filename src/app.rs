@@ -545,7 +545,7 @@ impl App {
         {
             let profile = self.profiles.get_mut_profile().unwrap();
             let mut path = profile.path.join(save_file_path.file_name().unwrap());
-            utils::verify_name(&mut path);
+            utils::validate_name(&mut path);
 
             std::fs::copy(&save_file_path, &path).unwrap();
             let entry = Rc::new(RefCell::new(Entry::new(path, 0).unwrap()));
@@ -563,7 +563,7 @@ impl App {
                     .borrow()
                     .path()
                     .join(save_file_path.file_name().unwrap());
-                utils::verify_name(&mut path);
+                utils::validate_name(&mut path);
                 let depth = entry.borrow().depth();
 
                 std::fs::copy(&save_file_path, &path).unwrap();

@@ -28,7 +28,7 @@ pub fn get_config_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn verify_name(path: &mut PathBuf) {
+pub fn validate_name(path: &mut PathBuf) {
     while path.exists() {
         path.set_file_name(format!(
             "{} (dup)",
@@ -46,7 +46,7 @@ pub fn rename(from: &Path, to: &str) -> Result<PathBuf> {
     new_path.set_file_name(to);
 
     if from.is_file() {
-        verify_name(&mut new_path);
+        validate_name(&mut new_path);
     }
 
     fs::rename(from, &new_path)?;
