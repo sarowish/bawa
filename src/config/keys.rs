@@ -1,6 +1,7 @@
 use crate::commands::{Command, HelpCommand, ProfileSelectionCommand};
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use indexmap::IndexMap;
 use serde::Deserialize;
 use std::{
     collections::HashMap,
@@ -69,17 +70,17 @@ fn parse_binding(binding: &str) -> Result<KeyEvent> {
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct KeyBindings {
-    pub general: HashMap<KeyEvent, Command>,
-    pub profile_selection: HashMap<KeyEvent, ProfileSelectionCommand>,
-    pub help: HashMap<KeyEvent, HelpCommand>,
+    pub general: IndexMap<KeyEvent, Command>,
+    pub profile_selection: IndexMap<KeyEvent, ProfileSelectionCommand>,
+    pub help: IndexMap<KeyEvent, HelpCommand>,
 }
 
 impl Default for KeyBindings {
     #[rustfmt::skip]
     fn default() -> Self {
-        let mut general = HashMap::new();
-        let mut profile_selection = HashMap::new();
-        let mut help = HashMap::new();
+        let mut general = IndexMap::new();
+        let mut profile_selection = IndexMap::new();
+        let mut help = IndexMap::new();
 
         macro_rules! insert_binding {
             ($map: expr, $key: expr, $command: expr) => {
@@ -139,7 +140,7 @@ impl Default for KeyBindings {
 }
 
 fn set_bindings<'a, T, E>(
-    key_bindings: &mut HashMap<KeyEvent, T>,
+    key_bindings: &mut IndexMap<KeyEvent, T>,
     user_key_bindings: &'a HashMap<String, String>,
 ) -> Result<(), anyhow::Error>
 where
@@ -151,7 +152,7 @@ where
             let binding = parse_binding(binding)
                 .with_context(|| format!("Error: failed to parse binding \"{binding}\""))?;
             if command.is_empty() {
-                key_bindings.remove(&binding);
+                key_bindings.swap_remove(&binding);
             } else {
                 key_bindings.insert(
                     binding,
@@ -189,7 +190,7 @@ impl TryFrom<UserKeyBindings> for KeyBindings {
 }
 
 impl Deref for KeyBindings {
-    type Target = HashMap<KeyEvent, Command>;
+    type Target = IndexMap<KeyEvent, Command>;
 
     fn deref(&self) -> &Self::Target {
         &self.general

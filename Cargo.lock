@@ -497,6 +497,7 @@ dependencies = [
  "clap",
  "crossterm",
  "dirs",
+ "indexmap",
  "lazy_static",
  "ratatui",
  "serde",
