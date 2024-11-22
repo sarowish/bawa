@@ -1,13 +1,14 @@
 use anyhow::Result;
 use app::App;
 use clap::ArgMatches;
-use config::{options::Options, Config};
+use config::{keys::KeyBindings, options::Options, Config};
 use crossterm::event::{self, Event};
 use input::InputMode;
 use ratatui::DefaultTerminal;
 
 mod app;
 mod cli;
+mod commands;
 mod config;
 mod entry;
 mod input;
@@ -25,6 +26,7 @@ lazy_static::lazy_static! {
         }
     };
     static ref OPTIONS: &'static Options = &CONFIG.options;
+    static ref KEY_BINDINGS: &'static KeyBindings = &CONFIG.key_bindings;
 }
 
 fn main() {

@@ -1,6 +1,10 @@
+pub mod keys;
 pub mod options;
 
-use self::options::{Options, UserOptions};
+use self::{
+    keys::{KeyBindings, UserKeyBindings},
+    options::{Options, UserOptions},
+};
 use crate::{utils, CLAP_ARGS};
 use anyhow::Result;
 use serde::Deserialize;
@@ -16,11 +20,13 @@ const CONFIG_FILE: &str = "config.toml";
 struct UserConfig {
     #[serde(flatten)]
     options: UserOptions,
+    key_bindings: Option<UserKeyBindings>,
 }
 
 #[derive(Default)]
 pub struct Config {
     pub options: Options,
+    pub key_bindings: KeyBindings,
 }
 
 impl Config {
@@ -62,8 +68,15 @@ impl TryFrom<UserConfig> for Config {
     type Error = anyhow::Error;
 
     fn try_from(user_config: UserConfig) -> Result<Self, Self::Error> {
-        Ok(Self {
+        let mut config = Self {
             options: user_config.options.into(),
-        })
+            ..Default::default()
+        };
+
+        if let Some(key_bindings) = user_config.key_bindings {
+            config.key_bindings = key_bindings.try_into()?;
+        }
+
+        Ok(config)
     }
 }

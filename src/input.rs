@@ -1,4 +1,8 @@
-use crate::app::App;
+use crate::{
+    app::App,
+    commands::{Command, ProfileSelectionCommand},
+    KEY_BINDINGS,
+};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -171,62 +175,63 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
 }
 
 fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
-    match key.code {
-        KeyCode::Left | KeyCode::Char('h') => app.on_left(),
-        KeyCode::Up | KeyCode::Char('k') => app.on_up(),
-        KeyCode::Right | KeyCode::Char('l') => app.on_right(),
-        KeyCode::Down | KeyCode::Char('j') => app.on_down(),
-        KeyCode::Char('K') => app.up_directory(),
-        KeyCode::Char('J') => app.down_directory(),
-        KeyCode::Char('g') => app.select_first(),
-        KeyCode::Char('G') => app.select_last(),
-        KeyCode::Char('p') => app.jump_to_parent(),
-        KeyCode::Char('f') => app.load_selected_save_file(),
-        KeyCode::Char('F') => app.mark_selected_save_file(),
-        KeyCode::Char('i') => app.import_save_file(false),
-        KeyCode::Char('I') => app.import_save_file(true),
-        KeyCode::Char('r') => app.prompt_for_confirmation(ConfirmationContext::Replacing),
-        KeyCode::Char('d') => app.prompt_for_confirmation(ConfirmationContext::Deletion),
-        KeyCode::Char('c') => app.take_input(InputMode::FolderCreation(false)),
-        KeyCode::Char('C') => app.take_input(InputMode::FolderCreation(true)),
-        KeyCode::Char('s') => app.enter_renaming(),
-        KeyCode::Char('a') => app.open_all_folds(),
-        KeyCode::Char('z') => app.close_all_folds(),
-        KeyCode::Char('w') => app.select_profile(),
-        KeyCode::Char('q') => return true,
-        _ => {}
+    if let Some(command) = KEY_BINDINGS.get(&key) {
+        match command {
+            Command::OnDown => app.on_down(),
+            Command::OnUp => app.on_up(),
+            Command::OnLeft => app.on_left(),
+            Command::OnRight => app.on_right(),
+            Command::SelectFirst => app.select_first(),
+            Command::SelectLast => app.select_last(),
+            Command::DownDirectory => app.down_directory(),
+            Command::UpDirectory => app.up_directory(),
+            Command::JumpToParent => app.jump_to_parent(),
+            Command::LoadSaveFile => app.load_selected_save_file(),
+            Command::MarkSaveFile => app.mark_selected_save_file(),
+            Command::ImportSaveFile => app.import_save_file(false),
+            Command::ImportSaveFileTopLevel => app.import_save_file(true),
+            Command::ReplaceSaveFile => app.prompt_for_confirmation(ConfirmationContext::Replacing),
+            Command::DeleteFile => app.prompt_for_confirmation(ConfirmationContext::Deletion),
+            Command::CreateFolder => app.take_input(InputMode::FolderCreation(false)),
+            Command::CreateFolderTopLevel => app.take_input(InputMode::FolderCreation(true)),
+            Command::Rename => app.enter_renaming(),
+            Command::OpenAllFolds => app.open_all_folds(),
+            Command::CloseAllFolds => app.close_all_folds(),
+            Command::SelectProfile => app.select_profile(),
+            Command::Quit => return true,
+        }
     }
 
     false
 }
 
 fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
-    match key.code {
-        KeyCode::Enter => app.confirm_profile_selection(),
-        KeyCode::Esc => abort(app),
-        KeyCode::Char('q') => return true,
-        _ => {
-            let profiles = &mut app.profiles.profiles;
+    let profiles = &mut app.profiles.profiles;
 
-            match key.code {
-                KeyCode::Down | KeyCode::Char('j') => profiles.next(),
-                KeyCode::Up | KeyCode::Char('k') => profiles.previous(),
-                KeyCode::Char('g') => profiles.select_first(),
-                KeyCode::Char('G') => profiles.select_last(),
-                KeyCode::Char('c') => {
-                    app.input_mode = InputMode::ProfileCreation;
-                    app.footer_input = Some(Input::new(&InputMode::ProfileCreation));
-                }
-                KeyCode::Char('r') => {
-                    app.input_mode = InputMode::ProfileRenaming;
-                    app.footer_input =
-                        Some(Input::with_text(&profiles.get_selected().unwrap().name));
-                }
-                KeyCode::Char('d') => {
-                    app.prompt_for_confirmation(ConfirmationContext::ProfileDeletion);
-                }
-                _ => {}
+    if let Some(command) = KEY_BINDINGS.profile_selection.get(&key) {
+        match command {
+            ProfileSelectionCommand::Create => {
+                app.input_mode = InputMode::ProfileCreation;
+                app.footer_input = Some(Input::new(&InputMode::ProfileCreation));
             }
+            ProfileSelectionCommand::Rename => {
+                app.input_mode = InputMode::ProfileRenaming;
+                app.footer_input = Some(Input::with_text(&profiles.get_selected().unwrap().name));
+            }
+            ProfileSelectionCommand::Delete => {
+                app.prompt_for_confirmation(ConfirmationContext::ProfileDeletion);
+            }
+            ProfileSelectionCommand::Select => app.confirm_profile_selection(),
+            ProfileSelectionCommand::Abort => abort(app),
+        }
+    } else if let Some(command) = KEY_BINDINGS.get(&key) {
+        match command {
+            Command::OnDown => profiles.next(),
+            Command::OnUp => profiles.previous(),
+            Command::SelectFirst => profiles.select_first(),
+            Command::SelectLast => profiles.select_last(),
+            Command::Quit => return true,
+            _ => (),
         }
     }
 
