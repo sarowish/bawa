@@ -1,6 +1,7 @@
 use crate::{
     app::App,
-    commands::{Command, ProfileSelectionCommand},
+    commands::{Command, HelpCommand, ProfileSelectionCommand},
+    help::HelpWindowState,
     KEY_BINDINGS,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -164,6 +165,10 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
         return false;
     }
 
+    if app.help_window_state.show {
+        return handle_key_help_mode(key, &mut app.help_window_state);
+    }
+
     match app.input_mode {
         InputMode::Normal => return handle_key_normal_mode(key, app),
         InputMode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
@@ -198,6 +203,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::OpenAllFolds => app.open_all_folds(),
             Command::CloseAllFolds => app.close_all_folds(),
             Command::SelectProfile => app.select_profile(),
+            Command::ToggleHelp => app.help_window_state.toggle(),
             Command::Quit => return true,
         }
     }
@@ -230,6 +236,30 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::OnUp => profiles.previous(),
             Command::SelectFirst => profiles.select_first(),
             Command::SelectLast => profiles.select_last(),
+            Command::Quit => return true,
+            _ => (),
+        }
+    }
+
+    false
+}
+
+fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut HelpWindowState) -> bool {
+    if let Some(command) = KEY_BINDINGS.help.get(&key) {
+        match command {
+            HelpCommand::ScrollUp => help_window_state.scroll_up(),
+            HelpCommand::ScrollDown => help_window_state.scroll_down(),
+            HelpCommand::GoToTop => help_window_state.scroll_top(),
+            HelpCommand::GoToBottom => help_window_state.scroll_bottom(),
+            HelpCommand::Abort => help_window_state.toggle(),
+        }
+    } else if let Some(command) = KEY_BINDINGS.get(&key) {
+        match command {
+            Command::OnDown => help_window_state.scroll_down(),
+            Command::OnUp => help_window_state.scroll_up(),
+            Command::SelectFirst => help_window_state.scroll_top(),
+            Command::SelectLast => help_window_state.scroll_bottom(),
+            Command::ToggleHelp => help_window_state.toggle(),
             Command::Quit => return true,
             _ => (),
         }

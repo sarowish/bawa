@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -9,8 +9,10 @@ use ratatui::{
 };
 
 use crate::{
-    app::App,
+    app::{App, StatefulList},
+    help::HelpWindowState,
     input::{ConfirmationContext, InputMode},
+    HELP,
 };
 use crate::{entry::Entry, utils};
 
@@ -87,7 +89,16 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         app.input_mode,
         InputMode::ProfileSelection | InputMode::ProfileCreation | InputMode::ProfileRenaming
     ) {
-        draw_profile_selection_window(f, app);
+        draw_list_with_help(
+            f,
+            "Profiles".to_string(),
+            &mut app.profiles.profiles,
+            &HELP.profile_selection,
+        );
+    }
+
+    if app.help_window_state.show {
+        draw_help(f, &mut app.help_window_state);
     }
 
     if let InputMode::Confirmation(context) = app.input_mode {
@@ -123,31 +134,127 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(entries, area, &mut selected_entries.state);
 }
 
-fn draw_profile_selection_window(f: &mut Frame, app: &mut App) {
-    let window = popup_window_from_dimensions(20, 50, f.area());
+fn draw_help(f: &mut Frame, help_window_state: &mut HelpWindowState) {
+    let window = popup_window_from_dimensions(30, 80, f.area());
     f.render_widget(Clear, window);
 
-    let item_texts: Vec<ListItem> = app
-        .profiles
-        .profiles
+    let width = std::cmp::max(window.width.saturating_sub(2), 1);
+
+    let help_entries = HELP
+        .iter()
+        .map(|(key, desc)| {
+            Line::from(vec![
+                Span::styled(key, Style::new().green()),
+                Span::raw(*desc),
+            ])
+        })
+        .collect::<Vec<Line>>();
+
+    help_window_state.max_scroll = help_entries
+        .iter()
+        .map(|entry| 1 + entry.width().saturating_sub(1) as u16 / width)
+        .sum::<u16>()
+        .saturating_sub(window.height - 2);
+
+    if help_window_state.max_scroll < help_window_state.scroll {
+        help_window_state.scroll = help_window_state.max_scroll;
+    }
+
+    let mut help_text = Paragraph::new(help_entries)
+        .scroll((help_window_state.scroll, 0))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(Span::styled("Help", Style::new().cyan().bold())),
+        );
+
+    if window.width > 0 {
+        help_text = help_text.wrap(Wrap { trim: false });
+    }
+
+    f.render_widget(help_text, window);
+}
+
+fn draw_list_with_help<T: Display>(
+    f: &mut Frame,
+    title: String,
+    list: &mut StatefulList<T>,
+    help_entries: &[(String, &str)],
+) {
+    const VER_MARGIN: u16 = 6;
+    const RIGHT_PADDING: u16 = 4;
+
+    let item_texts: Vec<Span> = list
         .items
         .iter()
         .map(ToString::to_string)
         .map(Span::raw)
-        .map(Line::from)
-        .map(ListItem::new)
         .collect();
 
-    let list = List::new(item_texts)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Profiles")
-                .title_style(Style::new().cyan().bold()),
-        )
-        .highlight_style(Style::new().magenta().bold());
+    let mut spans = Vec::new();
 
-    f.render_stateful_widget(list, window, &mut app.profiles.profiles.state);
+    for entry in help_entries {
+        spans.push(Span::styled(entry.0.clone(), Style::new().green()));
+        spans.push(Span::raw(entry.1));
+    }
+
+    let help_text = Line::from(spans);
+
+    let help_text_width = help_text.width();
+    let help_text_height = 1 + help_text_width as u16 / f.area().width;
+
+    let max_width = item_texts
+        .iter()
+        .map(Span::width)
+        .max()
+        .unwrap_or(0)
+        .max(help_text_width) as u16
+        + RIGHT_PADDING;
+
+    let frame_height = f.area().height;
+
+    let mut max_height = item_texts.len() as u16 + help_text_height + 2;
+    max_height = if frame_height <= max_height + VER_MARGIN {
+        frame_height.saturating_sub(VER_MARGIN)
+    } else {
+        max_height
+    }
+    .max(20);
+
+    let window = popup_window_from_dimensions(max_height, max_width, f.area());
+    f.render_widget(Clear, window);
+
+    f.render_widget(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(title)
+            .title_style(Style::new().cyan().bold()),
+        window,
+    );
+
+    let (entry_area, help_area) = {
+        let chunks = Layout::default()
+            .constraints([Constraint::Min(1), Constraint::Length(help_text_height)])
+            .direction(Direction::Vertical)
+            .margin(1)
+            .split(window);
+        (chunks[0], chunks[1])
+    };
+
+    let mut help_widget = Paragraph::new(help_text);
+    if window.width > 0 {
+        help_widget = help_widget.wrap(Wrap { trim: false });
+    }
+
+    let list_items = item_texts
+        .into_iter()
+        .map(ListItem::new)
+        .collect::<Vec<ListItem>>();
+
+    let w = List::new(list_items).highlight_style(Style::new().magenta().bold());
+
+    f.render_stateful_widget(w, entry_area, &mut list.state);
+    f.render_widget(help_widget, help_area);
 }
 
 fn draw_confirmation_window(f: &mut Frame, app: &App, context: ConfirmationContext) {

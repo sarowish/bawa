@@ -1,5 +1,6 @@
 use crate::{
     entry::Entry,
+    help::HelpWindowState,
     input::{ConfirmationContext, Input, InputMode},
     profile::Profiles,
     utils, OPTIONS,
@@ -8,12 +9,12 @@ use anyhow::{Context, Result};
 use ratatui::widgets::ListState;
 use std::{cell::RefCell, path::Path, rc::Rc};
 
-#[derive(Debug)]
 pub struct App {
     pub profiles: Profiles,
     pub visible_entries: StatefulList<Rc<RefCell<Entry>>>,
     pub footer_input: Option<Input>,
     pub input_mode: InputMode,
+    pub help_window_state: HelpWindowState,
 }
 
 impl App {
@@ -23,6 +24,7 @@ impl App {
             visible_entries: StatefulList::with_items(Vec::new()),
             footer_input: None,
             input_mode: InputMode::Normal,
+            help_window_state: HelpWindowState::new(),
         };
 
         if app.profiles.get_profile().is_some() {

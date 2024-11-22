@@ -3,6 +3,7 @@ use app::App;
 use clap::ArgMatches;
 use config::{keys::KeyBindings, options::Options, Config};
 use crossterm::event::{self, Event};
+use help::Help;
 use input::InputMode;
 use ratatui::DefaultTerminal;
 
@@ -11,6 +12,7 @@ mod cli;
 mod commands;
 mod config;
 mod entry;
+mod help;
 mod input;
 mod profile;
 mod ui;
@@ -27,6 +29,7 @@ lazy_static::lazy_static! {
     };
     static ref OPTIONS: &'static Options = &CONFIG.options;
     static ref KEY_BINDINGS: &'static KeyBindings = &CONFIG.key_bindings;
+    static ref HELP: Help<'static> = Help::new();
 }
 
 fn main() {

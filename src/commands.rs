@@ -21,6 +21,7 @@ pub enum Command {
     OpenAllFolds,
     CloseAllFolds,
     SelectProfile,
+    ToggleHelp,
     Quit,
 }
 
@@ -50,6 +51,7 @@ impl TryFrom<&str> for Command {
             "open_all_folds" => Command::OpenAllFolds,
             "close_all_folds" => Command::CloseAllFolds,
             "select_profile" => Command::SelectProfile,
+            "toggle_help" => Command::ToggleHelp,
             "quit" => Command::Quit,
             _ => anyhow::bail!("\"{}\" is an invalid command", command),
         };
@@ -77,6 +79,32 @@ impl TryFrom<&str> for ProfileSelectionCommand {
             "delete" => ProfileSelectionCommand::Delete,
             "select" => ProfileSelectionCommand::Select,
             "abort" => ProfileSelectionCommand::Abort,
+            _ => anyhow::bail!("\"{}\" is an invalid command", command),
+        };
+
+        Ok(command)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum HelpCommand {
+    ScrollUp,
+    ScrollDown,
+    GoToTop,
+    GoToBottom,
+    Abort,
+}
+
+impl TryFrom<&str> for HelpCommand {
+    type Error = anyhow::Error;
+
+    fn try_from(command: &str) -> Result<Self, Self::Error> {
+        let command = match command {
+            "scroll_up" => HelpCommand::ScrollUp,
+            "scroll_down" => HelpCommand::ScrollDown,
+            "go_to_top" => HelpCommand::GoToTop,
+            "go_to_bottom" => HelpCommand::GoToBottom,
+            "abort" => HelpCommand::Abort,
             _ => anyhow::bail!("\"{}\" is an invalid command", command),
         };
 

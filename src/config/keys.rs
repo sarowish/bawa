@@ -1,4 +1,4 @@
-use crate::commands::{Command, ProfileSelectionCommand};
+use crate::commands::{Command, HelpCommand, ProfileSelectionCommand};
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::Deserialize;
@@ -12,6 +12,7 @@ pub struct UserKeyBindings {
     #[serde(flatten)]
     general: Option<HashMap<String, String>>,
     profile_selection: Option<HashMap<String, String>>,
+    help: Option<HashMap<String, String>>,
 }
 
 fn parse_binding(binding: &str) -> Result<KeyEvent> {
@@ -70,6 +71,7 @@ fn parse_binding(binding: &str) -> Result<KeyEvent> {
 pub struct KeyBindings {
     pub general: HashMap<KeyEvent, Command>,
     pub profile_selection: HashMap<KeyEvent, ProfileSelectionCommand>,
+    pub help: HashMap<KeyEvent, HelpCommand>,
 }
 
 impl Default for KeyBindings {
@@ -77,6 +79,7 @@ impl Default for KeyBindings {
     fn default() -> Self {
         let mut general = HashMap::new();
         let mut profile_selection = HashMap::new();
+        let mut help = HashMap::new();
 
         macro_rules! insert_binding {
             ($map: expr, $key: expr, $command: expr) => {
@@ -110,6 +113,8 @@ impl Default for KeyBindings {
         insert_binding!(general, "a", Command::OpenAllFolds);
         insert_binding!(general, "z", Command::CloseAllFolds);
         insert_binding!(general, "p", Command::SelectProfile);
+        insert_binding!(general, "ctrl-h", Command::ToggleHelp);
+        insert_binding!(general, "f1", Command::ToggleHelp);
         insert_binding!(general, "q", Command::Quit);
         insert_binding!(general, "ctrl-c", Command::Quit);
 
@@ -119,9 +124,16 @@ impl Default for KeyBindings {
         insert_binding!(profile_selection, "enter", ProfileSelectionCommand::Select);
         insert_binding!(profile_selection, "escape", ProfileSelectionCommand::Abort);
 
+        insert_binding!(help, "ctrl-y", HelpCommand::ScrollUp);
+        insert_binding!(help, "ctrl-e", HelpCommand::ScrollDown);
+        insert_binding!(help, "g", HelpCommand::GoToTop);
+        insert_binding!(help, "G", HelpCommand::GoToBottom);
+        insert_binding!(help, "esc", HelpCommand::Abort);
+
         Self {
             general,
-            profile_selection
+            profile_selection,
+            help,
         }
     }
 }
@@ -166,6 +178,10 @@ impl TryFrom<UserKeyBindings> for KeyBindings {
 
         if let Some(bindings) = user_key_bindings.profile_selection {
             set_bindings(&mut key_bindings.profile_selection, &bindings)?;
+        }
+
+        if let Some(bindings) = user_key_bindings.help {
+            set_bindings(&mut key_bindings.help, &bindings)?;
         }
 
         Ok(key_bindings)
