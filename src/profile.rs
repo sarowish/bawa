@@ -132,16 +132,17 @@ impl Profiles {
             return;
         };
 
-        let old_name = profile.name.clone();
+        let mut new_path = profile.path.clone();
+        new_path.set_file_name(name);
+
+        fs::rename(&profile.path, &new_path).unwrap();
+
+        if profile.name == get_selected_profile().unwrap() {
+            update_selected_profile(name).unwrap();
+        }
 
         profile.name = name.to_string();
-        profile.path.set_file_name(name);
-
-        fs::rename(&old_name, &profile.path).unwrap();
-
-        if old_name == get_selected_profile().unwrap() {
-            update_selected_profile(&profile.name).unwrap();
-        }
+        profile.path = new_path;
 
         if matches!(self.active_profile, Some(idx) if idx == selected_idx) {
             for entry in &profile.entries {
