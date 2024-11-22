@@ -236,7 +236,7 @@ impl Entry {
 }
 
 fn set_name_helper(path: &Path) -> String {
-    let name = if OPTIONS.hide_extensions {
+    let name = if OPTIONS.hide_extensions && path.is_file() {
         path.file_stem()
     } else {
         path.file_name()
