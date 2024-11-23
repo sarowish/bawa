@@ -33,15 +33,13 @@ lazy_static::lazy_static! {
 }
 
 fn main() {
-    let clap_args = cli::get_matches();
-
     if !OPTIONS.save_file_path.exists() {
         return;
     }
 
     let app = app::App::new();
 
-    if let Some(("load", _)) = clap_args.subcommand() {
+    if let Some(("load", _)) = CLAP_ARGS.subcommand() {
         if let Err(e) = app.load_previous_save_file() {
             eprintln!("{e}");
         }
