@@ -1,7 +1,7 @@
 use crate::{
     app::App,
     commands::{Command, HelpCommand, ProfileSelectionCommand},
-    help::HelpWindowState,
+    help::Help,
     KEY_BINDINGS,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -165,8 +165,8 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
         return false;
     }
 
-    if app.help_window_state.show {
-        return handle_key_help_mode(key, &mut app.help_window_state);
+    if app.help.visible {
+        return handle_key_help_mode(key, &mut app.help);
     }
 
     match app.input_mode {
@@ -203,7 +203,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::OpenAllFolds => app.open_all_folds(),
             Command::CloseAllFolds => app.close_all_folds(),
             Command::SelectProfile => app.select_profile(),
-            Command::ToggleHelp => app.help_window_state.toggle(),
+            Command::ToggleHelp => app.help.toggle(),
             Command::Quit => return true,
         }
     }
@@ -244,7 +244,7 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
     false
 }
 
-fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut HelpWindowState) -> bool {
+fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut Help) -> bool {
     if let Some(command) = KEY_BINDINGS.help.get(&key) {
         match command {
             HelpCommand::ScrollUp => help_window_state.scroll_up(),

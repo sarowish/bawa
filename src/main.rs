@@ -3,7 +3,6 @@ use app::App;
 use clap::ArgMatches;
 use config::{keys::KeyBindings, options::Options, Config};
 use crossterm::event::{self, Event};
-use help::Help;
 use input::InputMode;
 use ratatui::DefaultTerminal;
 use std::sync::LazyLock;
@@ -29,7 +28,6 @@ static CONFIG: LazyLock<Config> = LazyLock::new(|| match Config::new() {
 });
 static OPTIONS: LazyLock<&'static Options> = LazyLock::new(|| &CONFIG.options);
 static KEY_BINDINGS: LazyLock<&'static KeyBindings> = LazyLock::new(|| &CONFIG.key_bindings);
-static HELP: LazyLock<Help<'static>> = LazyLock::new(Help::new);
 
 fn main() {
     if !OPTIONS.save_file_path.exists() {

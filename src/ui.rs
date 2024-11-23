@@ -1,5 +1,10 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
-
+use crate::{
+    app::{App, StatefulList},
+    entry::Entry,
+    help::Help,
+    input::{ConfirmationContext, InputMode},
+    utils,
+};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
@@ -7,14 +12,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Widget, Wrap},
     Frame,
 };
-
-use crate::{
-    app::{App, StatefulList},
-    help::HelpWindowState,
-    input::{ConfirmationContext, InputMode},
-    HELP,
-};
-use crate::{entry::Entry, utils};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 fn entries_to_list_items(entries: &[Rc<RefCell<Entry>>]) -> Vec<ListItem> {
     //let items = traverse_entries(entries, 0);
@@ -93,12 +91,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             f,
             "Profiles".to_string(),
             &mut app.profiles.profiles,
-            &HELP.profile_selection,
+            &app.help.bindings.profile_selection,
         );
     }
 
-    if app.help_window_state.show {
-        draw_help(f, &mut app.help_window_state);
+    if app.help.visible {
+        draw_help(f, &mut app.help);
     }
 
     if let InputMode::Confirmation(context) = app.input_mode {
@@ -134,13 +132,14 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(entries, area, &mut selected_entries.state);
 }
 
-fn draw_help(f: &mut Frame, help_window_state: &mut HelpWindowState) {
+fn draw_help(f: &mut Frame, help: &mut Help) {
     let window = popup_window_from_dimensions(30, 80, f.area());
     f.render_widget(Clear, window);
 
     let width = std::cmp::max(window.width.saturating_sub(2), 1);
 
-    let help_entries = HELP
+    let help_entries = help
+        .bindings
         .iter()
         .map(|(key, desc)| {
             Line::from(vec![
@@ -150,23 +149,21 @@ fn draw_help(f: &mut Frame, help_window_state: &mut HelpWindowState) {
         })
         .collect::<Vec<Line>>();
 
-    help_window_state.max_scroll = help_entries
+    help.max_scroll = help_entries
         .iter()
         .map(|entry| 1 + entry.width().saturating_sub(1) as u16 / width)
         .sum::<u16>()
         .saturating_sub(window.height - 2);
 
-    if help_window_state.max_scroll < help_window_state.scroll {
-        help_window_state.scroll = help_window_state.max_scroll;
+    if help.max_scroll < help.scroll {
+        help.scroll = help.max_scroll;
     }
 
-    let mut help_text = Paragraph::new(help_entries)
-        .scroll((help_window_state.scroll, 0))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(Span::styled("Help", Style::new().cyan().bold())),
-        );
+    let mut help_text = Paragraph::new(help_entries).scroll((help.scroll, 0)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(Span::styled("Help", Style::new().cyan().bold())),
+    );
 
     if window.width > 0 {
         help_text = help_text.wrap(Wrap { trim: false });
