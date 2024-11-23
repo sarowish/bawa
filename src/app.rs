@@ -47,8 +47,10 @@ impl App {
     }
 
     pub fn confirm_profile_selection(&mut self) {
-        if let Ok(()) = self.profiles.select_profile() {
-            self.load_entries();
+        if let Ok(selected_new_profile) = self.profiles.select_profile() {
+            if selected_new_profile {
+                self.load_entries();
+            }
             self.input_mode = InputMode::Normal;
         }
     }

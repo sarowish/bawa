@@ -169,10 +169,10 @@ impl Profiles {
         }
     }
 
-    pub fn select_profile(&mut self) -> Result<()> {
+    pub fn select_profile(&mut self) -> Result<bool> {
         if let Some(idx) = self.active_profile {
             if matches!(self.profiles.state.selected(), Some(selected_idx) if idx == selected_idx) {
-                return Ok(());
+                return Ok(false);
             }
 
             self.profiles.items[idx].entries.drain(..);
@@ -182,7 +182,7 @@ impl Profiles {
             profile.load_entries()?;
             update_selected_profile(&profile.name)?;
             self.active_profile = self.profiles.state.selected();
-            Ok(())
+            Ok(true)
         } else {
             Err(anyhow::anyhow!("There aren't any profiles to select"))
         }
