@@ -38,7 +38,7 @@ impl App {
 
     fn load_entries(&mut self) {
         if let Some(profile) = self.profiles.get_profile() {
-            self.visible_entries = StatefulList::with_items(profile.entries.clone());
+            self.visible_entries = StatefulList::from(&profile.entries);
         }
     }
 
@@ -592,6 +592,20 @@ impl App {
 pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
+}
+
+type RcEntry = Rc<RefCell<Entry>>;
+impl From<&Vec<RcEntry>> for StatefulList<RcEntry> {
+    fn from(value: &Vec<RcEntry>) -> Self {
+        let mut entries = Vec::new();
+
+        for entry in value {
+            entries.push(entry.clone());
+            entries.append(&mut entry.borrow().children());
+        }
+
+        Self::with_items(entries)
+    }
 }
 
 impl<T> StatefulList<T> {
