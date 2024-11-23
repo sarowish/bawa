@@ -18,3 +18,9 @@ unicode-width = "0.2.0"
 [[bin]]
 name = "bawa"
 path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
