@@ -6,6 +6,7 @@ use crossterm::event::{self, Event};
 use help::Help;
 use input::InputMode;
 use ratatui::DefaultTerminal;
+use std::sync::LazyLock;
 
 mod app;
 mod cli;
@@ -18,19 +19,17 @@ mod profile;
 mod ui;
 mod utils;
 
-lazy_static::lazy_static! {
-    static ref CLAP_ARGS: ArgMatches = cli::get_matches();
-    static ref CONFIG: Config = match Config::new() {
-        Ok(config) => config,
-        Err(e) => {
-            eprintln!("{e:?}");
-            std::process::exit(1);
-        }
-    };
-    static ref OPTIONS: &'static Options = &CONFIG.options;
-    static ref KEY_BINDINGS: &'static KeyBindings = &CONFIG.key_bindings;
-    static ref HELP: Help<'static> = Help::new();
-}
+static CLAP_ARGS: LazyLock<ArgMatches> = LazyLock::new(cli::get_matches);
+static CONFIG: LazyLock<Config> = LazyLock::new(|| match Config::new() {
+    Ok(config) => config,
+    Err(e) => {
+        eprintln!("{e:?}");
+        std::process::exit(1);
+    }
+});
+static OPTIONS: LazyLock<&'static Options> = LazyLock::new(|| &CONFIG.options);
+static KEY_BINDINGS: LazyLock<&'static KeyBindings> = LazyLock::new(|| &CONFIG.key_bindings);
+static HELP: LazyLock<Help<'static>> = LazyLock::new(Help::new);
 
 fn main() {
     if !OPTIONS.save_file_path.exists() {
