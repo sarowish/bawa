@@ -9,7 +9,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 #[derive(Debug)]
-pub enum InputMode {
+pub enum Mode {
     Normal,
     Confirmation(ConfirmationContext),
     EntryRenaming,
@@ -27,10 +27,10 @@ pub enum ConfirmationContext {
 }
 
 impl ConfirmationContext {
-    pub fn previous_input_mode(self) -> InputMode {
+    pub fn previous_input_mode(self) -> Mode {
         match self {
-            ConfirmationContext::Deletion | ConfirmationContext::Replacing => InputMode::Normal,
-            ConfirmationContext::ProfileDeletion => InputMode::ProfileSelection,
+            ConfirmationContext::Deletion | ConfirmationContext::Replacing => Mode::Normal,
+            ConfirmationContext::ProfileDeletion => Mode::ProfileSelection,
         }
     }
 }
@@ -44,11 +44,11 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn new(mode: &InputMode) -> Self {
+    pub fn new(mode: &Mode) -> Self {
         let prompt = match mode {
-            InputMode::ProfileCreation => "Profile Name",
-            InputMode::EntryRenaming | InputMode::ProfileRenaming => "Rename",
-            InputMode::FolderCreation(_) => "Folder Name",
+            Mode::ProfileCreation => "Profile Name",
+            Mode::EntryRenaming | Mode::ProfileRenaming => "Rename",
+            Mode::FolderCreation(_) => "Folder Name",
             _ => panic!(),
         };
 
@@ -169,10 +169,10 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
         return handle_key_help_mode(key, &mut app.help);
     }
 
-    match app.input_mode {
-        InputMode::Normal => return handle_key_normal_mode(key, app),
-        InputMode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
-        InputMode::Confirmation(context) => handle_key_confirmation_mode(key, app, context),
+    match app.mode {
+        Mode::Normal => return handle_key_normal_mode(key, app),
+        Mode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
+        Mode::Confirmation(context) => handle_key_confirmation_mode(key, app, context),
         _ => handle_key_editing_mode(key, app),
     }
 
@@ -197,8 +197,8 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::ImportSaveFileTopLevel => app.import_save_file(true),
             Command::ReplaceSaveFile => app.prompt_for_confirmation(ConfirmationContext::Replacing),
             Command::DeleteFile => app.prompt_for_confirmation(ConfirmationContext::Deletion),
-            Command::CreateFolder => app.take_input(InputMode::FolderCreation(false)),
-            Command::CreateFolderTopLevel => app.take_input(InputMode::FolderCreation(true)),
+            Command::CreateFolder => app.take_input(Mode::FolderCreation(false)),
+            Command::CreateFolderTopLevel => app.take_input(Mode::FolderCreation(true)),
             Command::Rename => app.enter_renaming(),
             Command::OpenAllFolds => app.open_all_folds(),
             Command::CloseAllFolds => app.close_all_folds(),
@@ -217,11 +217,11 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
     if let Some(command) = KEY_BINDINGS.profile_selection.get(&key) {
         match command {
             ProfileSelectionCommand::Create => {
-                app.input_mode = InputMode::ProfileCreation;
-                app.footer_input = Some(Input::new(&InputMode::ProfileCreation));
+                app.mode = Mode::ProfileCreation;
+                app.footer_input = Some(Input::new(&Mode::ProfileCreation));
             }
             ProfileSelectionCommand::Rename => {
-                app.input_mode = InputMode::ProfileRenaming;
+                app.mode = Mode::ProfileRenaming;
                 app.footer_input = Some(Input::with_text(&profiles.get_selected().unwrap().name));
             }
             ProfileSelectionCommand::Delete => {
@@ -271,7 +271,7 @@ fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut Help) -> bool {
 fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App, context: ConfirmationContext) {
     match key.code {
         KeyCode::Char('y') => app.on_confirmation(context),
-        KeyCode::Char('n') => app.input_mode = context.previous_input_mode(),
+        KeyCode::Char('n') => app.mode = context.previous_input_mode(),
         _ => (),
     }
 }
@@ -310,19 +310,19 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
 }
 
 fn complete(app: &mut App) {
-    match app.input_mode {
-        InputMode::EntryRenaming => app.rename_selected_entry(),
-        InputMode::FolderCreation(..) => app.create_folder(),
-        InputMode::ProfileCreation => {
+    match app.mode {
+        Mode::EntryRenaming => app.rename_selected_entry(),
+        Mode::FolderCreation(..) => app.create_folder(),
+        Mode::ProfileCreation => {
             app.profiles
                 .create_profile(&app.footer_input.as_ref().unwrap().text);
-            app.input_mode = InputMode::ProfileSelection;
+            app.mode = Mode::ProfileSelection;
             app.footer_input = None;
         }
-        InputMode::ProfileRenaming => {
+        Mode::ProfileRenaming => {
             app.profiles
                 .rename_selected_profile(&app.footer_input.as_ref().unwrap().text);
-            app.input_mode = InputMode::ProfileSelection;
+            app.mode = Mode::ProfileSelection;
             app.footer_input = None;
         }
         _ => (),
@@ -330,19 +330,19 @@ fn complete(app: &mut App) {
 }
 
 fn abort(app: &mut App) {
-    match app.input_mode {
-        InputMode::EntryRenaming | InputMode::FolderCreation(..) => {
-            app.input_mode = InputMode::Normal;
+    match app.mode {
+        Mode::EntryRenaming | Mode::FolderCreation(..) => {
+            app.mode = Mode::Normal;
             app.footer_input = None;
         }
-        InputMode::ProfileSelection => {
+        Mode::ProfileSelection => {
             // notify user that they can't abort if no profile is active
             if app.profiles.get_profile().is_some() {
-                app.input_mode = InputMode::Normal;
+                app.mode = Mode::Normal;
             }
         }
-        InputMode::ProfileCreation | InputMode::ProfileRenaming => {
-            app.input_mode = InputMode::ProfileSelection;
+        Mode::ProfileCreation | Mode::ProfileRenaming => {
+            app.mode = Mode::ProfileSelection;
             app.footer_input = None;
         }
         _ => (),

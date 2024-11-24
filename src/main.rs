@@ -3,7 +3,7 @@ use app::App;
 use clap::ArgMatches;
 use config::{keys::KeyBindings, options::Options, Config};
 use crossterm::event::{self, Event};
-use input::InputMode;
+use input::Mode;
 use ratatui::DefaultTerminal;
 use std::sync::LazyLock;
 
@@ -58,10 +58,10 @@ fn run_tui(mut terminal: DefaultTerminal, mut app: App) -> Result<()> {
             const PROFILE_CREATION_CURSOR_OFFSET: u16 = 14;
 
             let cursor_position = input.cursor_position;
-            let offset = match app.input_mode {
-                InputMode::EntryRenaming | InputMode::ProfileRenaming => RENAMING_CURSOR_OFFSET,
-                InputMode::FolderCreation(_) => FOLDER_CREATION_CURSOR_OFFSET,
-                InputMode::ProfileCreation => PROFILE_CREATION_CURSOR_OFFSET,
+            let offset = match app.mode {
+                Mode::EntryRenaming | Mode::ProfileRenaming => RENAMING_CURSOR_OFFSET,
+                Mode::FolderCreation(_) => FOLDER_CREATION_CURSOR_OFFSET,
+                Mode::ProfileCreation => PROFILE_CREATION_CURSOR_OFFSET,
                 _ => panic!(),
             };
             terminal

@@ -2,7 +2,7 @@ use crate::{
     app::{App, StatefulList},
     entry::Entry,
     help::Help,
-    input::{ConfirmationContext, InputMode},
+    input::{ConfirmationContext, Mode},
     utils,
 };
 use ratatui::{
@@ -84,8 +84,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_main(f, app, main_layout);
 
     if matches!(
-        app.input_mode,
-        InputMode::ProfileSelection | InputMode::ProfileCreation | InputMode::ProfileRenaming
+        app.mode,
+        Mode::ProfileSelection | Mode::ProfileCreation | Mode::ProfileRenaming
     ) {
         draw_list_with_help(
             f,
@@ -99,7 +99,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_help(f, &mut app.help);
     }
 
-    if let InputMode::Confirmation(context) = app.input_mode {
+    if let Mode::Confirmation(context) = app.mode {
         draw_confirmation_window(f, app, context);
     }
 

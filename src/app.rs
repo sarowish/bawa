@@ -1,7 +1,7 @@
 use crate::{
     entry::Entry,
     help::Help,
-    input::{ConfirmationContext, Input, InputMode},
+    input::{ConfirmationContext, Input, Mode},
     profile::Profiles,
     utils, OPTIONS,
 };
@@ -13,7 +13,7 @@ pub struct App {
     pub profiles: Profiles,
     pub visible_entries: StatefulList<Rc<RefCell<Entry>>>,
     pub footer_input: Option<Input>,
-    pub input_mode: InputMode,
+    pub mode: Mode,
     pub help: Help,
 }
 
@@ -23,7 +23,7 @@ impl App {
             profiles: Profiles::new().unwrap(),
             visible_entries: StatefulList::with_items(Vec::new()),
             footer_input: None,
-            input_mode: InputMode::Normal,
+            mode: Mode::Normal,
             help: Help::new(),
         };
 
@@ -43,7 +43,7 @@ impl App {
     }
 
     pub fn select_profile(&mut self) {
-        self.input_mode = InputMode::ProfileSelection;
+        self.mode = Mode::ProfileSelection;
     }
 
     pub fn confirm_profile_selection(&mut self) {
@@ -51,7 +51,7 @@ impl App {
             if selected_new_profile {
                 self.load_entries();
             }
-            self.input_mode = InputMode::Normal;
+            self.mode = Mode::Normal;
         }
     }
 
@@ -66,7 +66,7 @@ impl App {
                     self.visible_entries = StatefulList::with_items(Vec::new());
                 }
 
-                self.input_mode = InputMode::ProfileSelection;
+                self.mode = Mode::ProfileSelection;
             }
         }
     }
@@ -85,7 +85,7 @@ impl App {
             }
         }
 
-        self.input_mode = InputMode::Confirmation(context);
+        self.mode = Mode::Confirmation(context);
     }
 
     pub fn delete_selected_entry(&mut self) {
@@ -131,18 +131,18 @@ impl App {
             profile_entries.remove(idx);
         }
 
-        self.input_mode = InputMode::Normal;
+        self.mode = Mode::Normal;
     }
 
-    pub fn take_input(&mut self, mode: InputMode) {
+    pub fn take_input(&mut self, mode: Mode) {
         self.footer_input = Some(Input::new(&mode));
-        self.input_mode = mode;
+        self.mode = mode;
     }
 
     pub fn create_folder(&mut self) {
         let text = std::mem::take(&mut self.footer_input.as_mut().unwrap().text);
 
-        if matches!(self.input_mode, InputMode::FolderCreation(true))
+        if matches!(self.mode, Mode::FolderCreation(true))
             || !self
                 .visible_entries
                 .get_selected()
@@ -175,7 +175,7 @@ impl App {
         }
 
         self.footer_input = None;
-        self.input_mode = InputMode::Normal;
+        self.mode = Mode::Normal;
     }
 
     pub fn enter_renaming(&mut self) {
@@ -183,7 +183,7 @@ impl App {
             return;
         };
 
-        self.input_mode = InputMode::EntryRenaming;
+        self.mode = Mode::EntryRenaming;
         self.footer_input = Some(Input::with_text(&entry.borrow().file_name()));
     }
 
@@ -204,7 +204,7 @@ impl App {
         };
 
         self.footer_input = None;
-        self.input_mode = InputMode::Normal;
+        self.mode = Mode::Normal;
     }
 
     fn find_context(&self, idx: usize) -> Option<usize> {
@@ -584,7 +584,7 @@ impl App {
             }
         }
 
-        self.input_mode = InputMode::Normal;
+        self.mode = Mode::Normal;
     }
 }
 
