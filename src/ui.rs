@@ -277,7 +277,7 @@ impl ConfirmationPrompt {
     pub fn new(app: &App, context: ConfirmationContext) -> Self {
         let title = match context {
             ConfirmationContext::Deletion => "Permanently delete 1 selected file",
-            ConfirmationContext::Replacing => "Override the selected file",
+            ConfirmationContext::Replacing => "Overwrite the selected file",
             ConfirmationContext::ProfileDeletion => "Permanently delete the selected profile",
         };
 
