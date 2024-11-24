@@ -73,19 +73,13 @@ impl App {
 
     pub fn prompt_for_confirmation(&mut self, context: ConfirmationContext) {
         match context {
-            ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
-                if self.visible_entries.state.selected().is_none() {
-                    return;
-                }
-            }
-            ConfirmationContext::ProfileDeletion => {
-                if self.profiles.profiles.state.selected().is_none() {
-                    return;
-                }
-            }
+            ConfirmationContext::Deletion if self.visible_entries.state.selected().is_none() => {}
+            ConfirmationContext::Replacing if matches!(self.visible_entries.get_selected(), Some(entry) if entry.borrow().is_folder()) =>
+                {}
+            ConfirmationContext::ProfileDeletion
+                if self.profiles.profiles.state.selected().is_none() => {}
+            _ => self.mode = Mode::Confirmation(context),
         }
-
-        self.mode = Mode::Confirmation(context);
     }
 
     pub fn delete_selected_entry(&mut self) {
