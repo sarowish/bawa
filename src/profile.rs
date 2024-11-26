@@ -110,35 +110,36 @@ impl Profiles {
         })
     }
 
-    pub fn create_profile(&mut self, name: &str) {
-        let path = utils::get_data_dir().unwrap().join(name);
+    pub fn create_profile(&mut self, name: &str) -> Result<()> {
+        let path = utils::get_data_dir()?.join(name);
 
-        std::fs::create_dir(&path).unwrap();
+        std::fs::create_dir(&path)?;
 
         let profile = Profile::new(path);
         self.profiles.items.push(profile);
+        Ok(())
     }
 
-    pub fn rename_selected_profile(&mut self, name: &str) {
+    pub fn rename_selected_profile(&mut self, name: &str) -> Result<()> {
         if name.is_empty() {
-            return;
+            return Ok(());
         }
 
         let Some(selected_idx) = self.profiles.state.selected() else {
-            return;
+            return Ok(());
         };
 
         let Some(profile) = self.profiles.get_mut_selected() else {
-            return;
+            return Ok(());
         };
 
         let mut new_path = profile.path.clone();
         new_path.set_file_name(name);
 
-        fs::rename(&profile.path, &new_path).unwrap();
+        fs::rename(&profile.path, &new_path)?;
 
         if profile.name == get_selected_profile().unwrap() {
-            update_selected_profile(name).unwrap();
+            update_selected_profile(name)?;
         }
 
         profile.name = name.to_string();
@@ -151,14 +152,16 @@ impl Profiles {
                 entry.borrow_mut().update_children_path();
             }
         }
+
+        Ok(())
     }
 
-    pub fn delete_selected_profile(&mut self) {
+    pub fn delete_selected_profile(&mut self) -> Result<()> {
         let Some(profile) = self.profiles.get_selected() else {
-            return;
+            return Ok(());
         };
 
-        std::fs::remove_dir_all(&profile.path).unwrap();
+        std::fs::remove_dir_all(&profile.path)?;
 
         if let Some(idx) = self.profiles.state.selected() {
             self.profiles.items.remove(idx);
@@ -167,6 +170,8 @@ impl Profiles {
                 self.active_profile = None;
             }
         }
+
+        Ok(())
     }
 
     pub fn select_profile(&mut self) -> Result<bool> {

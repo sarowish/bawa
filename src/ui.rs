@@ -3,6 +3,7 @@ use crate::{
     entry::Entry,
     help::Help,
     input::{ConfirmationContext, Mode},
+    message::Kind as MessageKind,
     utils,
 };
 use ratatui::{
@@ -71,7 +72,7 @@ fn popup_window(hor_constraints: &[Constraint], ver_constraints: &[Constraint], 
 }
 
 pub fn draw(f: &mut Frame, app: &mut App) {
-    let (main_layout, footer) = if app.footer_input.is_some() {
+    let (main_layout, footer) = if app.footer_input.is_some() || !app.message.is_empty() {
         let chunks = Layout::default()
             .constraints([Constraint::Min(1), Constraint::Length(1)])
             .direction(Direction::Vertical)
@@ -261,8 +262,21 @@ fn draw_confirmation_window(f: &mut Frame, app: &App, context: ConfirmationConte
 }
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
-    let input = app.footer_input.as_ref().unwrap();
-    let line = Line::from(Span::raw(format!("{}{}", input.prompt, input.text)));
+    let line = if let Some(input) = &app.footer_input {
+        Line::from(Span::raw(format!("{}{}", input.prompt, input.text)))
+    } else if !app.message.is_empty() {
+        let style = Style::default();
+        Line::from(Span::styled(
+            app.message.to_string(),
+            match app.message.kind {
+                MessageKind::Info => style,
+                MessageKind::Error => style.red(),
+                MessageKind::Warning => style.yellow(),
+            },
+        ))
+    } else {
+        unreachable!()
+    };
 
     f.render_widget(line, area);
 }

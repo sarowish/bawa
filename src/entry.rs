@@ -50,8 +50,7 @@ impl Entry {
     }
 
     pub fn entries_from_path(path: &Path, depth: usize) -> Result<Vec<Rc<RefCell<Self>>>> {
-        Ok(path
-            .read_dir()?
+        path.read_dir()?
             .flatten()
             .filter_map(|dir_entry| {
                 let path = dir_entry.path();
@@ -59,9 +58,9 @@ impl Entry {
                     || path
                         .file_name()
                         .is_some_and(|file_name| file_name != "selected_save_file"))
-                .then(|| Rc::new(RefCell::new(Entry::new(path, depth).unwrap())))
+                .then(|| Entry::new(path, depth).map(RefCell::new).map(Rc::new))
             })
-            .collect())
+            .collect()
     }
 
     pub fn entries(&self) -> &Vec<Rc<RefCell<Entry>>> {

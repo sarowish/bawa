@@ -310,22 +310,30 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
 }
 
 fn complete(app: &mut App) {
-    match app.mode {
+    let res = match app.mode {
         Mode::EntryRenaming => app.rename_selected_entry(),
         Mode::FolderCreation(..) => app.create_folder(),
         Mode::ProfileCreation => {
-            app.profiles
+            let res = app
+                .profiles
                 .create_profile(&app.footer_input.as_ref().unwrap().text);
             app.mode = Mode::ProfileSelection;
             app.footer_input = None;
+            res
         }
         Mode::ProfileRenaming => {
-            app.profiles
+            let res = app
+                .profiles
                 .rename_selected_profile(&app.footer_input.as_ref().unwrap().text);
             app.mode = Mode::ProfileSelection;
             app.footer_input = None;
+            res
         }
-        _ => (),
+        _ => Ok(()),
+    };
+
+    if let Err(e) = res {
+        app.message.set_error(e.to_string());
     }
 }
 
@@ -336,9 +344,11 @@ fn abort(app: &mut App) {
             app.footer_input = None;
         }
         Mode::ProfileSelection => {
-            // notify user that they can't abort if no profile is active
             if app.profiles.get_profile().is_some() {
                 app.mode = Mode::Normal;
+            } else {
+                app.message
+                    .set_warning("Can't abort while no profile is selected".to_string());
             }
         }
         Mode::ProfileCreation | Mode::ProfileRenaming => {
