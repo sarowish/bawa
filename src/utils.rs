@@ -37,21 +37,14 @@ pub fn validate_name(path: &mut PathBuf) {
     }
 }
 
-pub fn rename(from: &Path, to: &str) -> Result<PathBuf> {
-    if to.is_empty() {
-        return Err(anyhow::anyhow!("Name can't be empty."));
-    }
-
-    let mut new_path = from.to_path_buf();
-    new_path.set_file_name(to);
-
+pub fn rename(from: &Path, mut to: PathBuf) -> Result<()> {
     if from.is_file() {
-        validate_name(&mut new_path);
+        validate_name(&mut to);
     }
 
-    fs::rename(from, &new_path)?;
+    fs::rename(from, &to)?;
 
-    Ok(new_path)
+    Ok(())
 }
 
 pub fn is_steam_id(dir_name: &str) -> bool {
@@ -97,11 +90,17 @@ pub fn get_save_file_paths() -> Result<Vec<PathBuf>> {
     Ok(paths)
 }
 
-pub fn get_relative_path(parent: &Path, child: &Path) -> Result<String> {
+pub fn get_relative_path_with_components(parent: &Path, child: &Path) -> Result<Vec<String>> {
     Ok(child
         .strip_prefix(parent)?
         .iter()
         .map(|name| name.to_string_lossy().to_string())
-        .collect::<Vec<String>>()
-        .join("/"))
+        .collect::<Vec<String>>())
+}
+
+pub fn get_relative_path(parent: &Path, child: &Path) -> Result<String> {
+    let components = get_relative_path_with_components(parent, child)?;
+    let mut path = PathBuf::new();
+    path.extend(components);
+    Ok(path.to_string_lossy().to_string())
 }

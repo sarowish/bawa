@@ -1,3 +1,4 @@
+use crate::OPTIONS;
 use anyhow::Result;
 use ratatui::{style::Color, text::Span};
 use std::{
@@ -6,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{utils, OPTIONS};
+pub type RcEntry = Rc<RefCell<Entry>>;
 
 #[derive(Debug)]
 pub enum Entry {
@@ -24,6 +25,27 @@ pub enum Entry {
         depth: usize,
         last_item: bool,
     },
+}
+
+pub fn find_entry(entries: &[RcEntry], components: &[String]) -> Vec<(usize, RcEntry)> {
+    let mut found_entries = Vec::new();
+    let component = &components[0];
+
+    let idx = entries
+        .iter()
+        .position(|entry| entry.borrow().file_name() == *component)
+        .unwrap();
+
+    found_entries.push((idx, entries[idx].clone()));
+
+    if components.len() != 1 {
+        found_entries.append(&mut find_entry(
+            entries[idx].borrow().entries(),
+            &components[1..],
+        ));
+    }
+
+    found_entries
 }
 
 impl Entry {
@@ -49,7 +71,7 @@ impl Entry {
         })
     }
 
-    pub fn entries_from_path(path: &Path, depth: usize) -> Result<Vec<Rc<RefCell<Self>>>> {
+    pub fn entries_from_path(path: &Path, depth: usize) -> Result<Vec<RcEntry>> {
         path.read_dir()?
             .flatten()
             .filter_map(|dir_entry| {
@@ -63,7 +85,7 @@ impl Entry {
             .collect()
     }
 
-    pub fn entries(&self) -> &Vec<Rc<RefCell<Entry>>> {
+    pub fn entries(&self) -> &Vec<RcEntry> {
         if let Self::Folder { entries, .. } = self {
             entries
         } else {
@@ -71,7 +93,7 @@ impl Entry {
         }
     }
 
-    pub fn entries_mut(&mut self) -> &mut Vec<Rc<RefCell<Entry>>> {
+    pub fn entries_mut(&mut self) -> &mut Vec<RcEntry> {
         if let Self::Folder { entries, .. } = self {
             entries
         } else {
@@ -79,7 +101,7 @@ impl Entry {
         }
     }
 
-    pub fn children(&self) -> Vec<Rc<RefCell<Entry>>> {
+    pub fn children(&self) -> Vec<RcEntry> {
         match self {
             Entry::Folder {
                 entries,
@@ -116,22 +138,20 @@ impl Entry {
         }
     }
 
-    pub fn insert_to_folder(&mut self, child: Rc<RefCell<Self>>) {
+    pub fn insert_to_folder(&mut self, child: RcEntry) {
         if let Self::Folder { entries, .. } = self {
             entries.push(child);
         }
     }
 
-    pub fn rename(&mut self, new_name: &str) -> Result<()> {
+    pub fn rename(&mut self, new_path: &Path) {
         match self {
             Entry::File { name, path, .. } | Entry::Folder { name, path, .. } => {
-                *path = utils::rename(path, new_name)?;
+                *path = new_path.to_path_buf();
                 *name = set_name_helper(path);
                 self.update_children_path();
             }
         }
-
-        Ok(())
     }
 
     pub fn update_children_path(&mut self) {
@@ -190,7 +210,7 @@ impl Entry {
         matches!(self, Self::File { .. })
     }
 
-    fn is_fold_opened(&self) -> Option<bool> {
+    pub fn is_fold_opened(&self) -> Option<bool> {
         match self {
             Entry::Folder { is_fold_opened, .. } => Some(*is_fold_opened),
             Entry::File { .. } => None,

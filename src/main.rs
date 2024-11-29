@@ -15,6 +15,7 @@ mod profile;
 mod term;
 mod ui;
 mod utils;
+mod watcher;
 
 static CLAP_ARGS: LazyLock<ArgMatches> = LazyLock::new(cli::get_matches);
 static CONFIG: LazyLock<Config> = LazyLock::new(|| match Config::new() {

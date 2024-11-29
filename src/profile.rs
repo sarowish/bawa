@@ -1,6 +1,7 @@
 use crate::app::StatefulList;
-use crate::entry::Entry;
+use crate::entry::{find_entry, Entry, RcEntry};
 use crate::utils;
+use crate::watcher::HandleFileSystemEvent;
 use anyhow::Result;
 use std::cell::RefCell;
 use std::fmt::Display;
@@ -19,9 +20,9 @@ pub fn get_profiles() -> Result<Vec<Profile>> {
 }
 
 pub fn get_selected_profile_file() -> Result<PathBuf> {
-    let data_dir = utils::get_data_dir();
+    let data_dir = utils::get_data_dir()?;
 
-    data_dir.map(|path| path.join("selected_profile"))
+    Ok(data_dir.join("selected_profile"))
 }
 
 pub fn update_selected_profile(profile_name: &str) -> Result<()> {
@@ -76,6 +77,16 @@ impl Profile {
             .path
             .join(fs::read_to_string(self.get_selected_save_path())?.trim()))
     }
+
+    pub fn find_entry(&self, entry_path: &Path) -> Vec<(usize, RcEntry)> {
+        let components = utils::get_relative_path_with_components(&self.path, entry_path).unwrap();
+
+        if components.is_empty() {
+            Vec::new()
+        } else {
+            find_entry(&self.entries, &components)
+        }
+    }
 }
 
 impl Display for Profile {
@@ -110,13 +121,11 @@ impl Profiles {
         })
     }
 
-    pub fn create_profile(&mut self, name: &str) -> Result<()> {
+    pub fn create_profile(name: &str) -> Result<()> {
         let path = utils::get_data_dir()?.join(name);
 
         std::fs::create_dir(&path)?;
 
-        let profile = Profile::new(path);
-        self.profiles.items.push(profile);
         Ok(())
     }
 
@@ -125,50 +134,19 @@ impl Profiles {
             return Ok(());
         }
 
-        let Some(selected_idx) = self.profiles.state.selected() else {
-            return Ok(());
-        };
+        if let Some(profile) = self.profiles.get_selected() {
+            let mut new_path = profile.path.clone();
+            new_path.set_file_name(name);
 
-        let Some(profile) = self.profiles.get_mut_selected() else {
-            return Ok(());
-        };
-
-        let mut new_path = profile.path.clone();
-        new_path.set_file_name(name);
-
-        fs::rename(&profile.path, &new_path)?;
-
-        if profile.name == get_selected_profile().unwrap() {
-            update_selected_profile(name)?;
-        }
-
-        profile.name = name.to_string();
-        profile.path = new_path;
-
-        if matches!(self.active_profile, Some(idx) if idx == selected_idx) {
-            for entry in &profile.entries {
-                let entry_name = entry.borrow().name();
-                *entry.borrow_mut().path_mut() = profile.path.join(entry_name);
-                entry.borrow_mut().update_children_path();
-            }
+            fs::rename(&profile.path, &new_path)?;
         }
 
         Ok(())
     }
 
     pub fn delete_selected_profile(&mut self) -> Result<()> {
-        let Some(profile) = self.profiles.get_selected() else {
-            return Ok(());
-        };
-
-        std::fs::remove_dir_all(&profile.path)?;
-
-        if let Some(idx) = self.profiles.state.selected() {
-            self.profiles.items.remove(idx);
-
-            if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
-                self.active_profile = None;
-            }
+        if let Some(profile) = self.profiles.get_selected() {
+            std::fs::remove_dir_all(&profile.path)?;
         }
 
         Ok(())
@@ -199,5 +177,52 @@ impl Profiles {
 
     pub fn get_mut_profile(&mut self) -> Option<&mut Profile> {
         self.profiles.items.get_mut(self.active_profile?)
+    }
+}
+
+impl HandleFileSystemEvent for Profiles {
+    fn on_create(&mut self, path: &Path) -> Result<()> {
+        self.profiles.items.push(Profile::new(path.to_path_buf()));
+
+        Ok(())
+    }
+
+    fn on_rename(&mut self, path: &Path, new_path: &Path) -> Result<()> {
+        let items = &self.profiles.items;
+        let Some(idx) = items.iter().position(|profile| profile.path == path) else {
+            return Ok(());
+        };
+
+        let profile = &mut self.profiles.items[idx];
+        let new_name = new_path.file_name().unwrap().to_string_lossy();
+
+        if matches!(get_selected_profile(), Ok(selected_profile) if selected_profile  == profile.name)
+        {
+            update_selected_profile(&new_name)?;
+        }
+
+        profile.name = new_name.to_string();
+        profile.path = new_path.to_path_buf();
+
+        if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
+            for entry in &profile.entries {
+                let entry_name = entry.borrow().name();
+                *entry.borrow_mut().path_mut() = profile.path.join(entry_name);
+                entry.borrow_mut().update_children_path();
+            }
+        }
+
+        Ok(())
+    }
+
+    fn on_delete(&mut self, path: &Path) {
+        let items = &self.profiles.items;
+        if let Some(idx) = items.iter().position(|profile| profile.path == path) {
+            self.profiles.items.remove(idx);
+
+            if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
+                self.active_profile = None;
+            }
+        };
     }
 }

@@ -2,6 +2,7 @@ use crate::{
     app::App,
     commands::{Command, HelpCommand, ProfileSelectionCommand},
     help::Help,
+    profile::Profiles,
     KEY_BINDINGS,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -313,14 +314,11 @@ fn complete(app: &mut App) {
     let res = match app.mode {
         Mode::EntryRenaming => app.rename_selected_entry(),
         Mode::FolderCreation(..) => app.create_folder(),
-        Mode::ProfileCreation => {
-            let res = app
-                .profiles
-                .create_profile(&app.footer_input.as_ref().unwrap().text);
-            app.mode = Mode::ProfileSelection;
-            app.footer_input = None;
-            res
-        }
+        Mode::ProfileCreation => Profiles::create_profile(&app.footer_input.as_ref().unwrap().text)
+            .inspect(|()| {
+                app.mode = Mode::ProfileSelection;
+                app.footer_input = None;
+            }),
         Mode::ProfileRenaming => {
             let res = app
                 .profiles
