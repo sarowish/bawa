@@ -196,10 +196,10 @@ impl App {
         let text = std::mem::take(&mut self.footer_input.as_mut().unwrap().text);
 
         if matches!(self.mode, Mode::FolderCreation(true))
-            || !self
+            || self
                 .visible_entries
                 .get_selected()
-                .is_some_and(|entry| !(entry.borrow().depth() == 0 && entry.borrow().is_file()))
+                .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
         {
             let profile = self.profiles.get_mut_profile().unwrap();
             let path = profile.path.join(text);
@@ -605,10 +605,10 @@ impl App {
         let save_file_path = OPTIONS.save_file_path.clone();
 
         if top_level
-            || !self
+            || self
                 .visible_entries
                 .get_selected()
-                .is_some_and(|entry| !(entry.borrow().depth() == 0 && entry.borrow().is_file()))
+                .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
         {
             let profile = self.profiles.get_mut_profile().unwrap();
             let mut path = profile.path.join(save_file_path.file_name().unwrap());
