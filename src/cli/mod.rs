@@ -1,5 +1,10 @@
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
+pub use handlers::handle_subcommands;
+
+mod commands;
+mod handlers;
+
 pub fn get_matches() -> ArgMatches {
     Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
@@ -25,6 +30,11 @@ pub fn get_matches() -> ArgMatches {
                 .help("Path to save file")
                 .value_name("FILE"),
         )
-        .subcommand(Command::new("load").about("load the previously loaded save file"))
+        .subcommand(commands::create_list_subcommand())
+        .subcommand(commands::create_load_subcommand())
+        .subcommand(commands::create_import_subcommand())
+        .subcommand(commands::create_rename_subcommand())
+        .subcommand(commands::create_delete_subcommand())
+        .subcommand(commands::create_profile_subcommand())
         .get_matches()
 }

@@ -98,7 +98,7 @@ impl Display for Profile {
 #[derive(Debug)]
 pub struct Profiles {
     pub profiles: StatefulList<Profile>,
-    active_profile: Option<usize>,
+    pub active_profile: Option<usize>,
 }
 
 impl Profiles {

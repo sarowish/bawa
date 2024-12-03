@@ -44,10 +44,7 @@ impl App {
             rx,
         };
 
-        app.watcher.watch_profiles(&utils::get_data_dir()?);
-
-        if let Some(profile) = app.profiles.get_profile() {
-            app.watcher.watch_profile_entries(&profile.path);
+        if app.profiles.get_profile().is_some() {
             app.load_entries();
         } else {
             app.select_profile();
@@ -59,6 +56,12 @@ impl App {
     pub async fn run(mut self) -> Result<()> {
         let mut terminal = ratatui::init();
         let mut term_events = EventStream::new();
+
+        self.watcher.watch_profiles(&utils::get_data_dir()?);
+
+        if let Some(profile) = self.profiles.get_profile() {
+            self.watcher.watch_profile_entries(&profile.path);
+        }
 
         loop {
             terminal.draw(|f| ui::draw(f, &mut self))?;
@@ -177,11 +180,7 @@ impl App {
             return Ok(());
         };
 
-        if selected_entry.borrow().is_folder() {
-            std::fs::remove_dir_all(selected_entry.borrow().path())?;
-        } else {
-            std::fs::remove_file(selected_entry.borrow().path())?;
-        }
+        selected_entry.borrow().delete()?;
 
         self.mode = Mode::Normal;
         Ok(())
@@ -590,7 +589,7 @@ impl App {
         }
     }
 
-    fn load_save_file(&self, path: &Path) -> Result<()> {
+    pub fn load_save_file(&self, path: &Path) -> Result<()> {
         if let Some(profile) = self.profiles.get_profile() {
             std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
             profile

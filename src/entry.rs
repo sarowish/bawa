@@ -154,6 +154,15 @@ impl Entry {
         }
     }
 
+    pub fn delete(&self) -> Result<()> {
+        match self {
+            Entry::File { path, .. } => std::fs::remove_file(path)?,
+            Entry::Folder { path, .. } => std::fs::remove_dir_all(path)?,
+        }
+
+        Ok(())
+    }
+
     pub fn update_children_path(&mut self) {
         if self.is_file() {
             return;

@@ -1,4 +1,5 @@
 use clap::ArgMatches;
+use cli::handle_subcommands;
 use config::{keys::KeyBindings, options::Options, Config};
 use std::sync::LazyLock;
 
@@ -34,12 +35,9 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let app = app::App::new()?;
+    let mut app = app::App::new()?;
 
-    if let Some(("load", _)) = CLAP_ARGS.subcommand() {
-        if let Err(e) = app.load_previous_save_file() {
-            eprintln!("{e:?}");
-        }
+    if handle_subcommands(&mut app) {
         return Ok(());
     }
 

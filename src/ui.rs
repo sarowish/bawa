@@ -15,7 +15,7 @@ use ratatui::{
 };
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 
-fn entries_to_list_items(entries: &[Rc<RefCell<Entry>>]) -> Vec<ListItem> {
+pub fn entries_to_list_items(entries: &[Rc<RefCell<Entry>>]) -> Vec<ListItem> {
     //let items = traverse_entries(entries, 0);
     let items = entries
         .iter()
