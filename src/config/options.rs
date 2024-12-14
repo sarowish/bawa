@@ -19,9 +19,9 @@ pub enum RenameEmpty {
 #[derive(Default, Deserialize)]
 #[serde(rename_all(deserialize = "snake_case"))]
 pub enum RenameCursor {
-    #[default]
     End,
     Start,
+    #[default]
     BeforeExt,
 }
 
