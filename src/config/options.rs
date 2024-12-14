@@ -8,16 +8,43 @@ use std::{
 };
 
 #[derive(Deserialize)]
+#[serde(rename_all(deserialize = "snake_case"))]
+pub enum RenameEmpty {
+    Stem,
+    Ext,
+    DotExt,
+    All,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all(deserialize = "snake_case"))]
+pub enum RenameCursor {
+    #[default]
+    End,
+    Start,
+    BeforeExt,
+}
+
+#[derive(Default, Deserialize)]
+pub struct RenameOptions {
+    pub empty: Option<RenameEmpty>,
+    #[serde(default)]
+    pub cursor: RenameCursor,
+}
+
+#[derive(Deserialize)]
 pub struct UserOptions {
     save_file_path: Option<PathBuf>,
     auto_mark_save_file: Option<bool>,
     hide_extensions: Option<bool>,
+    rename: Option<RenameOptions>,
 }
 
 pub struct Options {
     pub save_file_path: PathBuf,
     pub auto_mark_save_file: bool,
     pub hide_extensions: bool,
+    pub rename: RenameOptions,
 }
 
 impl Options {
@@ -34,6 +61,7 @@ impl Default for Options {
             save_file_path: PathBuf::new(),
             auto_mark_save_file: false,
             hide_extensions: false,
+            rename: RenameOptions::default(),
         }
     }
 }
@@ -53,6 +81,7 @@ impl From<UserOptions> for Options {
         set_options_field!(save_file_path);
         set_options_field!(auto_mark_save_file);
         set_options_field!(hide_extensions);
+        set_options_field!(rename);
 
         options
     }

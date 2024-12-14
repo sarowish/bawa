@@ -70,6 +70,16 @@ impl Input {
         }
     }
 
+    pub fn set_idx(&mut self, idx: usize) {
+        if idx > self.text.len() {
+            self.idx = self.text.len();
+        } else {
+            self.idx = idx;
+        }
+
+        self.cursor_position = self.text[..self.idx].width() as u16;
+    }
+
     pub fn insert_key(&mut self, ch: char) {
         if self.idx == self.text.len() {
             self.text.push(ch);

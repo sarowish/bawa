@@ -1,4 +1,5 @@
 use crate::{
+    config::options,
     entry::{Entry, RcEntry},
     event::Event,
     help::Help,
@@ -230,7 +231,35 @@ impl App {
         };
 
         self.mode = Mode::EntryRenaming;
-        self.footer_input = Some(Input::with_text(&entry.borrow().file_name()));
+
+        let mut file_name = entry.borrow().file_name();
+
+        if let Some(empty_opt) = &OPTIONS.rename.empty {
+            if let options::RenameEmpty::All = empty_opt {
+                file_name = String::new();
+            } else if let Some(dot_idx) = file_name.rfind('.') {
+                match empty_opt {
+                    options::RenameEmpty::Stem => file_name.drain(..dot_idx),
+                    options::RenameEmpty::Ext => file_name.drain((dot_idx + 1)..),
+                    options::RenameEmpty::DotExt => file_name.drain(dot_idx..),
+                    options::RenameEmpty::All => unreachable!(),
+                };
+            }
+        }
+
+        let mut input = Input::with_text(&file_name);
+
+        match OPTIONS.rename.cursor {
+            options::RenameCursor::End => (),
+            options::RenameCursor::Start => input.set_idx(0),
+            options::RenameCursor::BeforeExt => {
+                if let Some(dot_idx) = file_name.rfind('.') {
+                    input.set_idx(dot_idx);
+                }
+            }
+        }
+
+        self.footer_input = Some(input);
     }
 
     pub fn rename_selected_entry(&mut self) -> Result<()> {
