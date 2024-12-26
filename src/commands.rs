@@ -22,6 +22,9 @@ pub enum Command {
     CloseAllFolds,
     SelectProfile,
     ToggleHelp,
+    EnterSearch,
+    RepeatLastSearch,
+    RepeatLastSearchBackward,
     Quit,
 }
 
@@ -52,6 +55,9 @@ impl TryFrom<&str> for Command {
             "close_all_folds" => Command::CloseAllFolds,
             "select_profile" => Command::SelectProfile,
             "toggle_help" => Command::ToggleHelp,
+            "enter_search" => Command::EnterSearch,
+            "repeat_last_search" => Command::RepeatLastSearch,
+            "repeat_last_search_backward" => Command::RepeatLastSearchBackward,
             "quit" => Command::Quit,
             _ => anyhow::bail!("\"{}\" is an invalid command", command),
         };

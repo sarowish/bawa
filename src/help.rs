@@ -2,7 +2,7 @@ use crate::KEY_BINDINGS;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 
-const DESCRIPTIONS_LEN: usize = 23;
+const DESCRIPTIONS_LEN: usize = 26;
 const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Go one line downward",                                 // On Down
     "Go one line upward",                                   // On Up
@@ -26,6 +26,9 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Close all folds",                                      // Close All Folds
     "Open profile selection window",                        // Select Profile
     "Open help window",                                     // Toggle Help
+    "Enter search pattern",                                 // Enter Search
+    "Repeat the latest search",                             // Repeat Last Search
+    "Repeat the latest search backward",                    // Repeat Last Search Backward
     "Quit application",                                     // Quit
 ];
 

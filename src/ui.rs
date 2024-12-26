@@ -2,7 +2,7 @@ use crate::{
     app::{App, StatefulList},
     entry::Entry,
     help::Help,
-    input::{ConfirmationContext, Mode},
+    input::{ConfirmationContext, Mode, SearchContext},
     message::Kind as MessageKind,
     utils,
 };
@@ -86,7 +86,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     if matches!(
         app.mode,
-        Mode::ProfileSelection | Mode::ProfileCreation | Mode::ProfileRenaming
+        Mode::ProfileSelection
+            | Mode::ProfileCreation
+            | Mode::ProfileRenaming
+            | Mode::Search(SearchContext::ProfileSelection)
     ) {
         draw_list_with_help(
             f,

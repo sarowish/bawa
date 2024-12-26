@@ -6,6 +6,7 @@ use crate::{
     input::{self, ConfirmationContext, Input, Mode},
     message::Message,
     profile::Profiles,
+    search::Search,
     term, ui, utils,
     watcher::{
         Context as EventContext, FileSystemEvent, HandleFileSystemEvent, Kind as EventKind, Watcher,
@@ -26,6 +27,7 @@ pub struct App {
     pub mode: Mode,
     pub help: Help,
     pub message: Message,
+    pub search: Search,
     pub watcher: Watcher,
     rx: UnboundedReceiver<Event>,
 }
@@ -41,6 +43,7 @@ impl App {
             footer_input: None,
             mode: Mode::Normal,
             help: Help::new(),
+            search: Search::default(),
             watcher: Watcher::new(tx.clone())?,
             rx,
         };
@@ -577,6 +580,26 @@ impl App {
         self.visible_entries.select_with_index(idx);
     }
 
+    fn get_index_of_active_list(&mut self) -> Option<usize> {
+        match self.mode {
+            Mode::Normal => self.visible_entries.state.selected(),
+            Mode::ProfileSelection => self.profiles.profiles.state.selected(),
+            _ => unreachable!(),
+        }
+    }
+
+    fn set_index_of_active_list(&mut self, new_idx: Option<usize>) {
+        if new_idx.is_none() {
+            return;
+        }
+
+        match self.mode {
+            Mode::Normal => self.visible_entries.state.select(new_idx),
+            Mode::ProfileSelection => self.profiles.profiles.state.select(new_idx),
+            _ => unreachable!(),
+        };
+    }
+
     pub fn load_selected_save_file(&mut self) {
         if let Some(entry) = self.visible_entries.get_selected() {
             if let Entry::File { ref path, .. } = *entry.borrow() {
@@ -676,6 +699,74 @@ impl App {
 
         self.mode = Mode::Normal;
         Ok(())
+    }
+
+    pub fn search_new_pattern(&mut self) {
+        let pattern = std::mem::take(&mut self.footer_input.as_mut().unwrap().text);
+
+        self.search = Search::new(&pattern);
+        self.repeat_search();
+    }
+
+    fn run_search(&mut self) {
+        let list = match self.mode {
+            Mode::Normal => &self
+                .visible_entries
+                .items
+                .iter()
+                .map(|entry| entry.borrow().name())
+                .collect::<Vec<String>>(),
+            Mode::ProfileSelection => &self
+                .profiles
+                .profiles
+                .items
+                .iter()
+                .map(|profile| profile.name.clone())
+                .collect::<Vec<String>>(),
+            _ => unreachable!(),
+        };
+
+        self.search.search(list);
+
+        if self.search.matches.is_empty() {
+            self.message
+                .set_error(format!("Pattern not found: {}", self.search.pattern));
+        } else {
+            self.message.clear();
+        }
+    }
+
+    pub fn repeat_search(&mut self) {
+        self.run_search();
+
+        let new_idx = if let Some(selected_idx) = self.get_index_of_active_list() {
+            self.search
+                .matches
+                .iter()
+                .find(|index| **index > selected_idx)
+                .or_else(|| self.search.matches.first())
+        } else {
+            self.search.matches.first()
+        };
+
+        self.set_index_of_active_list(new_idx.copied());
+    }
+
+    pub fn repeat_search_backwards(&mut self) {
+        self.run_search();
+
+        let new_idx = if let Some(selected_idx) = self.get_index_of_active_list() {
+            self.search
+                .matches
+                .iter()
+                .rev()
+                .find(|index| **index < selected_idx)
+                .or_else(|| self.search.matches.last())
+        } else {
+            self.search.matches.last()
+        };
+
+        self.set_index_of_active_list(new_idx.copied());
     }
 }
 

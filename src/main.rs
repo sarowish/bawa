@@ -13,6 +13,7 @@ mod help;
 mod input;
 mod message;
 mod profile;
+mod search;
 mod term;
 mod ui;
 mod utils;

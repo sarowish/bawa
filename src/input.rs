@@ -9,8 +9,9 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-#[derive(Debug)]
+#[derive(Default)]
 pub enum Mode {
+    #[default]
     Normal,
     Confirmation(ConfirmationContext),
     EntryRenaming,
@@ -18,6 +19,7 @@ pub enum Mode {
     ProfileCreation,
     ProfileRenaming,
     FolderCreation(bool),
+    Search(SearchContext),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -36,6 +38,22 @@ impl ConfirmationContext {
     }
 }
 
+#[derive(Default)]
+pub enum SearchContext {
+    #[default]
+    Normal,
+    ProfileSelection,
+}
+
+impl SearchContext {
+    pub fn previous_input_mode(&self) -> Mode {
+        match self {
+            SearchContext::Normal => Mode::Normal,
+            SearchContext::ProfileSelection => Mode::ProfileSelection,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Input {
     pub text: String,
@@ -47,9 +65,10 @@ pub struct Input {
 impl Input {
     pub fn new(mode: &Mode) -> Self {
         let prompt = match mode {
-            Mode::ProfileCreation => "Profile Name",
-            Mode::EntryRenaming | Mode::ProfileRenaming => "Rename",
-            Mode::FolderCreation(_) => "Folder Name",
+            Mode::Search(_) => "/",
+            Mode::ProfileCreation => "Profile Name:",
+            Mode::EntryRenaming | Mode::ProfileRenaming => "Rename: ",
+            Mode::FolderCreation(_) => "Folder Name: ",
             _ => panic!(),
         };
 
@@ -57,7 +76,7 @@ impl Input {
             text: String::new(),
             idx: 0,
             cursor_position: 0,
-            prompt: format!("{prompt}: "),
+            prompt: prompt.to_string(),
         }
     }
 
@@ -215,6 +234,9 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::CloseAllFolds => app.close_all_folds(),
             Command::SelectProfile => app.select_profile(),
             Command::ToggleHelp => app.help.toggle(),
+            Command::EnterSearch => app.take_input(Mode::Search(SearchContext::Normal)),
+            Command::RepeatLastSearch => app.repeat_search(),
+            Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
             Command::Quit => return true,
         }
     }
@@ -247,6 +269,9 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::OnUp => profiles.previous(),
             Command::SelectFirst => profiles.select_first(),
             Command::SelectLast => profiles.select_last(),
+            Command::EnterSearch => app.take_input(Mode::Search(SearchContext::ProfileSelection)),
+            Command::RepeatLastSearch => app.repeat_search(),
+            Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
             Command::Quit => return true,
             _ => (),
         }
@@ -321,7 +346,7 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
 }
 
 fn complete(app: &mut App) {
-    let res = match app.mode {
+    let res = match &app.mode {
         Mode::EntryRenaming => app.rename_selected_entry(),
         Mode::FolderCreation(..) => app.create_folder(),
         Mode::ProfileCreation => Profiles::create_profile(&app.footer_input.as_ref().unwrap().text)
@@ -337,6 +362,12 @@ fn complete(app: &mut App) {
             app.footer_input = None;
             res
         }
+        Mode::Search(context) => {
+            app.mode = context.previous_input_mode();
+            app.search_new_pattern();
+            app.footer_input = None;
+            Ok(())
+        }
         _ => Ok(()),
     };
 
@@ -346,7 +377,7 @@ fn complete(app: &mut App) {
 }
 
 fn abort(app: &mut App) {
-    match app.mode {
+    match &app.mode {
         Mode::EntryRenaming | Mode::FolderCreation(..) => {
             app.mode = Mode::Normal;
             app.footer_input = None;
@@ -361,6 +392,10 @@ fn abort(app: &mut App) {
         }
         Mode::ProfileCreation | Mode::ProfileRenaming => {
             app.mode = Mode::ProfileSelection;
+            app.footer_input = None;
+        }
+        Mode::Search(context) => {
+            app.mode = context.previous_input_mode();
             app.footer_input = None;
         }
         _ => (),

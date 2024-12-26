@@ -116,6 +116,9 @@ impl Default for KeyBindings {
         insert_binding!(general, "p", Command::SelectProfile);
         insert_binding!(general, "ctrl-h", Command::ToggleHelp);
         insert_binding!(general, "f1", Command::ToggleHelp);
+        insert_binding!(general, "/", Command::EnterSearch);
+        insert_binding!(general, "n", Command::RepeatLastSearch);
+        insert_binding!(general, "N", Command::RepeatLastSearchBackward);
         insert_binding!(general, "q", Command::Quit);
         insert_binding!(general, "ctrl-c", Command::Quit);
 
