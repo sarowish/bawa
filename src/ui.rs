@@ -7,7 +7,7 @@ use crate::{
     utils,
 };
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Widget, Wrap},
@@ -28,34 +28,14 @@ pub fn entries_to_list_items(entries: &[Rc<RefCell<Entry>>]) -> Vec<ListItem> {
 }
 
 fn popup_window_from_dimensions(height: u16, width: u16, r: Rect) -> Rect {
-    let hor = [
-        Constraint::Length(r.width.saturating_sub(width) / 2),
-        Constraint::Length(width),
-        Constraint::Min(1),
-    ];
-
-    let ver = [
-        Constraint::Length(r.height.saturating_sub(height) / 2),
-        Constraint::Length(height),
-        Constraint::Min(1),
-    ];
-
+    let hor = [Constraint::Length(width)];
+    let ver = [Constraint::Length(height)];
     popup_window(&hor, &ver, r)
 }
 
 fn _popup_window_from_percentage(hor_percent: u16, ver_percent: u16, r: Rect) -> Rect {
-    let ver = [
-        Constraint::Percentage((100 - ver_percent) / 2),
-        Constraint::Percentage(ver_percent),
-        Constraint::Percentage((100 - ver_percent) / 2),
-    ];
-
-    let hor = [
-        Constraint::Percentage((100 - hor_percent) / 2),
-        Constraint::Percentage(hor_percent),
-        Constraint::Percentage((100 - hor_percent) / 2),
-    ];
-
+    let ver = [Constraint::Percentage(ver_percent)];
+    let hor = [Constraint::Percentage(hor_percent)];
     popup_window(&hor, &ver, r)
 }
 
@@ -63,12 +43,16 @@ fn popup_window(hor_constraints: &[Constraint], ver_constraints: &[Constraint], 
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(ver_constraints)
+        .flex(Flex::Center)
+        .vertical_margin(1)
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
         .constraints(hor_constraints)
-        .split(popup_layout[1])[1]
+        .flex(Flex::Center)
+        .horizontal_margin(1)
+        .split(popup_layout[0])[0]
 }
 
 pub fn draw(f: &mut Frame, app: &mut App) {
