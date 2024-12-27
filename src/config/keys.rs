@@ -106,11 +106,11 @@ impl Default for KeyBindings {
         insert_binding!(general, "F", Command::MarkSaveFile);
         insert_binding!(general, "i", Command::ImportSaveFile);
         insert_binding!(general, "I", Command::ImportSaveFileTopLevel);
-        insert_binding!(general, "r", Command::ReplaceSaveFile);
+        insert_binding!(general, "R", Command::ReplaceSaveFile);
         insert_binding!(general, "d", Command::DeleteFile);
         insert_binding!(general, "c", Command::CreateFolder);
         insert_binding!(general, "C", Command::CreateFolderTopLevel);
-        insert_binding!(general, "s", Command::Rename);
+        insert_binding!(general, "r", Command::Rename);
         insert_binding!(general, "a", Command::OpenAllFolds);
         insert_binding!(general, "z", Command::CloseAllFolds);
         insert_binding!(general, "p", Command::SelectProfile);
