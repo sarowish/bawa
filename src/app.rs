@@ -843,13 +843,22 @@ impl HandleFileSystemEvent for App {
     }
 
     fn on_rename(&mut self, path: &Path, new_path: &Path) -> Result<()> {
+        let moved = path.parent() != new_path.parent();
+
+        if moved {
+            self.on_delete(path);
+            self.on_create(new_path)?;
+        }
+
         let Some(profile) = self.profiles.get_mut_profile() else {
             return Ok(());
         };
 
-        let path_to_entry = profile.find_entry(path);
-        let child = &path_to_entry.last().unwrap().1;
-        child.borrow_mut().rename(new_path);
+        if !moved {
+            let path_to_entry = profile.find_entry(path);
+            let child = &path_to_entry.last().unwrap().1;
+            child.borrow_mut().rename(new_path);
+        }
 
         if matches!(profile.get_selected_save_file(), Ok(selected_save_file) if selected_save_file == path)
         {
@@ -881,6 +890,7 @@ impl HandleFileSystemEvent for App {
             .iter()
             .position(|entry| Rc::ptr_eq(entry, &path_to_entry.last().unwrap().1))
         {
+            self.close_fold_at_index(idx);
             self.visible_entries.items.remove(idx);
         }
     }
