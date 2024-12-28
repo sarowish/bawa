@@ -101,18 +101,18 @@ impl Entry {
         }
     }
 
-    pub fn children(&self) -> Vec<RcEntry> {
+    pub fn children(&self, ignore_fold: bool) -> Vec<RcEntry> {
         match self {
             Entry::Folder {
                 entries,
                 is_fold_opened,
                 ..
-            } if *is_fold_opened => {
+            } if ignore_fold || *is_fold_opened => {
                 let mut items = Vec::new();
 
                 for entry in entries {
                     items.push(entry.clone());
-                    items.append(&mut entry.borrow().children());
+                    items.append(&mut entry.borrow().children(ignore_fold));
                 }
 
                 items

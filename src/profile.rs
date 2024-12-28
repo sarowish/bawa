@@ -3,12 +3,10 @@ use crate::entry::{find_entry, Entry, RcEntry};
 use crate::utils;
 use crate::watcher::HandleFileSystemEvent;
 use anyhow::Result;
-use std::cell::RefCell;
 use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
 pub fn get_profiles() -> Result<Vec<Profile>> {
     Ok(utils::get_data_dir()?
@@ -41,7 +39,7 @@ pub fn get_selected_profile() -> Result<String> {
 pub struct Profile {
     pub name: String,
     pub path: PathBuf,
-    pub entries: Vec<Rc<RefCell<Entry>>>,
+    pub entries: Vec<RcEntry>,
 }
 
 impl Profile {
@@ -86,6 +84,25 @@ impl Profile {
         } else {
             find_entry(&self.entries, &components)
         }
+    }
+
+    pub fn get_entries(&self, flatten: bool) -> Vec<RcEntry> {
+        let mut entries = Vec::new();
+
+        for entry in &self.entries {
+            entries.push(entry.clone());
+            entries.append(&mut entry.borrow().children(flatten));
+        }
+
+        entries
+    }
+
+    pub fn get_file_rel_paths(&self) -> Vec<String> {
+        self.get_entries(true)
+            .iter()
+            .filter(|entry| entry.borrow().is_file())
+            .map(|entry| utils::get_relative_path(&self.path, &entry.borrow().path()).unwrap())
+            .collect()
     }
 }
 

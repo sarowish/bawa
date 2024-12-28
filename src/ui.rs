@@ -2,12 +2,13 @@ use crate::{
     app::{App, StatefulList},
     entry::Entry,
     help::Help,
-    input::{ConfirmationContext, Mode, SearchContext},
+    input::{ConfirmationContext, Input, Mode, SearchContext},
     message::Kind as MessageKind,
+    search::FuzzyFinder,
     utils,
 };
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Widget, Wrap},
@@ -55,6 +56,10 @@ fn popup_window(hor_constraints: &[Constraint], ver_constraints: &[Constraint], 
         .split(popup_layout[0])[0]
 }
 
+fn set_cursor(f: &mut Frame, input: &Input, area: Rect) {
+    f.set_cursor_position((area.x + input.cursor_position(), area.y + 1));
+}
+
 pub fn draw(f: &mut Frame, app: &mut App) {
     let (main_layout, footer) = if app.footer_input.is_some() || !app.message.is_empty() {
         let chunks = Layout::default()
@@ -80,6 +85,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             "Profiles".to_string(),
             &mut app.profiles.profiles,
             &app.help.bindings.profile_selection,
+        );
+    }
+
+    if app.fuzzy_finder.input.is_some() {
+        draw_fuzzy_finder(
+            f,
+            &mut app.fuzzy_finder,
+            popup_window_from_dimensions(50, 90, f.area()),
         );
     }
 
@@ -118,6 +131,56 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     f.render_stateful_widget(entries, area, &mut selected_entries.state);
+}
+
+fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {
+    f.render_widget(Clear, area);
+
+    let (search_bar_area, results_area) = {
+        let chunks = Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).split(area);
+        (chunks[0], chunks[1])
+    };
+
+    let input = fuzzy_finder.input.as_ref().unwrap();
+    let search = Paragraph::new(input.text.clone()).block(
+        Block::default()
+            .title(Span::styled("Search", Style::default().cyan().bold()))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded),
+    );
+
+    set_cursor(f, input, search_bar_area.inner(Margin::new(1, 0)));
+    f.render_widget(search, search_bar_area);
+
+    let selected_idx = fuzzy_finder.matched_items.state.selected().unwrap_or(0);
+    let results = List::new(fuzzy_finder.matched_items.items.iter().enumerate().map(
+        |(idx, item)| {
+            let mut line = item.highlight_slices();
+            line.insert(0, (if selected_idx == idx { "> " } else { "  " }, false));
+            let line = Line::from(
+                line.into_iter()
+                    .map(|(slice, highlighted)| {
+                        if highlighted {
+                            Span::styled(slice, Style::default().yellow())
+                        } else if selected_idx == idx {
+                            Span::styled(slice, Style::default().magenta())
+                        } else {
+                            Span::raw(slice)
+                        }
+                    })
+                    .collect::<Vec<Span>>(),
+            );
+            ListItem::new(line)
+        },
+    ))
+    .block(
+        Block::default()
+            .title(Span::styled("Results", Style::default().cyan().bold()))
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded),
+    );
+
+    f.render_stateful_widget(results, results_area, &mut fuzzy_finder.matched_items.state);
 }
 
 fn draw_help(f: &mut Frame, help: &mut Help) {
@@ -250,6 +313,7 @@ fn draw_confirmation_window(f: &mut Frame, app: &App, context: ConfirmationConte
 
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let line = if let Some(input) = &app.footer_input {
+        set_cursor(f, input, area);
         Line::from(Span::raw(format!("{}{}", input.prompt, input.text)))
     } else if !app.message.is_empty() {
         let style = Style::default();

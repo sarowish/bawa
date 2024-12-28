@@ -1,13 +1,13 @@
 use crate::{
     config::options,
-    entry::{Entry, RcEntry},
+    entry::Entry,
     event::Event,
     help::Help,
     input::{self, ConfirmationContext, Input, Mode},
     message::Message,
     profile::Profiles,
-    search::Search,
-    term, ui, utils,
+    search::{FuzzyFinder, Search},
+    ui, utils,
     watcher::{
         Context as EventContext, FileSystemEvent, HandleFileSystemEvent, Kind as EventKind, Watcher,
     },
@@ -17,7 +17,11 @@ use anyhow::{Context, Result};
 use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
 use ratatui::widgets::ListState;
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{
+    cell::RefCell,
+    path::{self, Path},
+    rc::Rc,
+};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 pub struct App {
@@ -28,6 +32,7 @@ pub struct App {
     pub help: Help,
     pub message: Message,
     pub search: Search,
+    pub fuzzy_finder: FuzzyFinder,
     pub watcher: Watcher,
     rx: UnboundedReceiver<Event>,
 }
@@ -44,6 +49,7 @@ impl App {
             mode: Mode::Normal,
             help: Help::new(),
             search: Search::default(),
+            fuzzy_finder: FuzzyFinder::new(),
             watcher: Watcher::new(tx.clone())?,
             rx,
         };
@@ -69,7 +75,6 @@ impl App {
 
         loop {
             terminal.draw(|f| ui::draw(f, &mut self))?;
-            term::set_cursor(&self, &mut terminal);
 
             let event = tokio::select! {
                 Some(Ok(term_event)) = term_events.next() => Event::Crossterm(term_event),
@@ -119,7 +124,7 @@ impl App {
 
     fn load_entries(&mut self) {
         if let Some(profile) = self.profiles.get_profile() {
-            self.visible_entries = StatefulList::from(&profile.entries);
+            self.visible_entries = StatefulList::with_items(profile.get_entries(false));
         }
     }
 
@@ -333,7 +338,7 @@ impl App {
                 *is_fold_opened = true;
             }
 
-            entry.borrow().children()
+            entry.borrow().children(false)
         } else {
             return false;
         };
@@ -768,6 +773,37 @@ impl App {
 
         self.set_index_of_active_list(new_idx.copied());
     }
+
+    pub fn open_fuzzy_finder(&mut self) {
+        self.fuzzy_finder.input = Some(Input::new(&Mode::Normal));
+        self.fuzzy_finder
+            .fill_paths(&self.profiles.get_profile().unwrap().get_file_rel_paths());
+        self.fuzzy_finder.update_matches();
+    }
+
+    pub fn jump_to_entry(&mut self) {
+        let selected_item = self.fuzzy_finder.matched_items.get_selected();
+        let rel_path = selected_item.as_ref().unwrap().text.clone();
+        let components = rel_path.split(path::MAIN_SEPARATOR).collect::<Vec<&str>>();
+        let mut idx = 0;
+
+        for component in components {
+            while let Some(entry) = self.visible_entries.items.get(idx) {
+                if entry.borrow().file_name() == component {
+                    if entry.borrow().is_file() {
+                        self.visible_entries.state.select(Some(idx));
+                        return;
+                    }
+
+                    self.open_fold_at_index(idx);
+                    idx += 1;
+                    break;
+                }
+
+                idx += 1;
+            }
+        }
+    }
 }
 
 impl HandleFileSystemEvent for App {
@@ -854,19 +890,6 @@ impl HandleFileSystemEvent for App {
 pub struct StatefulList<T> {
     pub state: ListState,
     pub items: Vec<T>,
-}
-
-impl From<&Vec<RcEntry>> for StatefulList<RcEntry> {
-    fn from(value: &Vec<RcEntry>) -> Self {
-        let mut entries = Vec::new();
-
-        for entry in value {
-            entries.push(entry.clone());
-            entries.append(&mut entry.borrow().children());
-        }
-
-        Self::with_items(entries)
-    }
 }
 
 impl<T> StatefulList<T> {

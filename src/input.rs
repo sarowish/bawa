@@ -1,3 +1,5 @@
+use std::ops::RangeBounds;
+
 use crate::{
     app::App,
     commands::{Command, HelpCommand, ProfileSelectionCommand},
@@ -54,12 +56,19 @@ impl SearchContext {
     }
 }
 
-#[derive(Debug)]
+enum InputChange {
+    Insert,
+    Append,
+    Delete,
+}
+
 pub struct Input {
     pub text: String,
     pub prompt: String,
     idx: usize,
-    pub cursor_position: u16,
+    cursor_position: u16,
+    cursor_offset: u16,
+    change: Option<InputChange>,
 }
 
 impl Input {
@@ -69,24 +78,33 @@ impl Input {
             Mode::ProfileCreation => "Profile Name:",
             Mode::EntryRenaming | Mode::ProfileRenaming => "Rename: ",
             Mode::FolderCreation(_) => "Folder Name: ",
+            Mode::Normal => "",
             _ => panic!(),
         };
 
         Self {
             text: String::new(),
+            prompt: prompt.to_string(),
             idx: 0,
             cursor_position: 0,
-            prompt: prompt.to_string(),
+            cursor_offset: prompt.len() as u16,
+            change: None,
         }
     }
 
     pub fn with_text(text: &str) -> Self {
         Self {
             text: text.to_string(),
+            prompt: String::from("Rename: "),
             idx: text.len(),
             cursor_position: text.width() as u16,
-            prompt: String::from("Rename: "),
+            cursor_offset: 8,
+            change: None,
         }
+    }
+
+    pub fn cursor_position(&self) -> u16 {
+        self.cursor_position + self.cursor_offset
     }
 
     pub fn set_idx(&mut self, idx: usize) {
@@ -99,29 +117,37 @@ impl Input {
         self.cursor_position = self.text[..self.idx].width() as u16;
     }
 
-    pub fn insert_key(&mut self, ch: char) {
+    fn clear_range<R: RangeBounds<usize>>(&mut self, range: R) {
+        if self.text.drain(range).next().is_some() {
+            self.change = Some(InputChange::Delete);
+        }
+    }
+
+    fn insert_key(&mut self, ch: char) {
         if self.idx == self.text.len() {
             self.text.push(ch);
+            self.change = Some(InputChange::Append);
         } else {
             self.text.insert(self.idx, ch);
+            self.change = Some(InputChange::Insert);
         }
 
         self.idx += ch.len_utf8();
         self.cursor_position += ch.width().unwrap() as u16;
     }
 
-    pub fn pop_key(&mut self) {
+    fn pop_key(&mut self) {
         if self.idx == 0 {
             return;
         }
 
         let (offset, ch) = self.text[..self.idx].grapheme_indices(true).last().unwrap();
         self.cursor_position -= ch.width() as u16;
-        self.text.drain(offset..self.idx);
+        self.clear_range(offset..self.idx);
         self.idx = offset;
     }
 
-    pub fn move_cursor_left(&mut self) {
+    fn move_cursor_left(&mut self) {
         if self.idx == 0 {
             return;
         }
@@ -131,7 +157,7 @@ impl Input {
         self.idx = offset;
     }
 
-    pub fn move_cursor_right(&mut self) {
+    fn move_cursor_right(&mut self) {
         if self.idx == self.text.len() {
             return;
         }
@@ -145,7 +171,7 @@ impl Input {
         self.idx = offset;
     }
 
-    pub fn move_cursor_one_word_left(&mut self) {
+    fn move_cursor_one_word_left(&mut self) {
         let idx = self.text[..self.idx]
             .unicode_word_indices()
             .last()
@@ -154,7 +180,7 @@ impl Input {
         self.idx = idx;
     }
 
-    pub fn move_cursor_one_word_right(&mut self) {
+    fn move_cursor_one_word_right(&mut self) {
         let old_idx = self.idx;
         self.idx = self.text[self.idx..]
             .unicode_word_indices()
@@ -163,30 +189,60 @@ impl Input {
         self.cursor_position += self.text[old_idx..self.idx].width() as u16;
     }
 
-    pub fn move_cursor_to_beginning_of_line(&mut self) {
+    fn move_cursor_to_beginning_of_line(&mut self) {
         self.idx = 0;
         self.cursor_position = 0;
     }
 
-    pub fn move_cursor_to_end_of_line(&mut self) {
+    fn move_cursor_to_end_of_line(&mut self) {
         self.idx = self.text.len();
         self.cursor_position = self.text.width() as u16;
     }
 
-    pub fn delete_word_before_cursor(&mut self) {
+    fn delete_word_before_cursor(&mut self) {
         let old_idx = self.idx;
         self.move_cursor_one_word_left();
-        self.text.drain(self.idx..old_idx);
+        self.clear_range(self.idx..old_idx);
     }
 
-    pub fn clear_line(&mut self) {
-        self.text.clear();
-        self.idx = 0;
-        self.cursor_position = 0;
+    fn clear_line(&mut self) {
+        if !self.text.is_empty() {
+            self.text.clear();
+            self.idx = 0;
+            self.cursor_position = 0;
+            self.change = Some(InputChange::Delete);
+        }
     }
 
-    pub fn clear_to_right(&mut self) {
-        self.text.drain(self.idx..);
+    fn clear_to_right(&mut self) {
+        self.clear_range(self.idx..);
+    }
+
+    fn update(&mut self, key: KeyEvent) {
+        self.change = None;
+
+        match (key.code, key.modifiers) {
+            (KeyCode::Left, KeyModifiers::CONTROL) => self.move_cursor_one_word_left(),
+            (KeyCode::Right, KeyModifiers::CONTROL) => self.move_cursor_one_word_right(),
+            (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
+                self.move_cursor_left();
+            }
+            (KeyCode::Right, _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
+                self.move_cursor_right();
+            }
+            (KeyCode::Char('a'), KeyModifiers::CONTROL) => {
+                self.move_cursor_to_beginning_of_line();
+            }
+            (KeyCode::Char('e'), KeyModifiers::CONTROL) => self.move_cursor_to_end_of_line(),
+            (KeyCode::Char('w'), KeyModifiers::CONTROL) => self.delete_word_before_cursor(),
+            (KeyCode::Char('u'), KeyModifiers::CONTROL) => self.clear_line(),
+            (KeyCode::Char('k'), KeyModifiers::CONTROL) => self.clear_to_right(),
+            (KeyCode::Backspace, _) | (KeyCode::Char('h'), KeyModifiers::CONTROL) => {
+                self.pop_key();
+            }
+            (KeyCode::Char(c), _) => self.insert_key(c),
+            _ => {}
+        }
     }
 }
 
@@ -200,7 +256,7 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
     }
 
     match app.mode {
-        Mode::Normal => return handle_key_normal_mode(key, app),
+        Mode::Normal if !app.fuzzy_finder.is_active() => return handle_key_normal_mode(key, app),
         Mode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
         Mode::Confirmation(context) => handle_key_confirmation_mode(key, app, context),
         _ => handle_key_editing_mode(key, app),
@@ -237,6 +293,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::EnterSearch => app.take_input(Mode::Search(SearchContext::Normal)),
             Command::RepeatLastSearch => app.repeat_search(),
             Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
+            Command::OpenFuzzyFinder => app.open_fuzzy_finder(),
             Command::Quit => return true,
         }
     }
@@ -317,30 +374,21 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
         KeyCode::Enter => complete(app),
         KeyCode::Esc => abort(app),
         _ => {
-            let input = app.footer_input.as_mut().unwrap();
+            if let Some(input) = &mut app.fuzzy_finder.input {
+                match key.code {
+                    KeyCode::Down => app.fuzzy_finder.matched_items.next(),
+                    KeyCode::Up => app.fuzzy_finder.matched_items.previous(),
+                    _ => {
+                        input.update(key);
 
-            match (key.code, key.modifiers) {
-                (KeyCode::Left, KeyModifiers::CONTROL) => input.move_cursor_one_word_left(),
-                (KeyCode::Right, KeyModifiers::CONTROL) => input.move_cursor_one_word_right(),
-                (KeyCode::Left, _) | (KeyCode::Char('b'), KeyModifiers::CONTROL) => {
-                    input.move_cursor_left();
+                        if input.change.is_some() {
+                            app.fuzzy_finder.update_matches();
+                        }
+                    }
                 }
-                (KeyCode::Right, _) | (KeyCode::Char('f'), KeyModifiers::CONTROL) => {
-                    input.move_cursor_right();
-                }
-                (KeyCode::Char('a'), KeyModifiers::CONTROL) => {
-                    input.move_cursor_to_beginning_of_line();
-                }
-                (KeyCode::Char('e'), KeyModifiers::CONTROL) => input.move_cursor_to_end_of_line(),
-                (KeyCode::Char('w'), KeyModifiers::CONTROL) => input.delete_word_before_cursor(),
-                (KeyCode::Char('u'), KeyModifiers::CONTROL) => input.clear_line(),
-                (KeyCode::Char('k'), KeyModifiers::CONTROL) => input.clear_to_right(),
-                (KeyCode::Backspace, _) | (KeyCode::Char('h'), KeyModifiers::CONTROL) => {
-                    input.pop_key();
-                }
-                (KeyCode::Char(c), _) => input.insert_key(c),
-                _ => {}
-            }
+            } else if let Some(input) = &mut app.footer_input {
+                input.update(key);
+            };
         }
     }
 }
@@ -366,6 +414,13 @@ fn complete(app: &mut App) {
             app.mode = context.previous_input_mode();
             app.search_new_pattern();
             app.footer_input = None;
+            Ok(())
+        }
+        Mode::Normal
+            if app.fuzzy_finder.is_active() && !app.fuzzy_finder.matched_items.items.is_empty() =>
+        {
+            app.jump_to_entry();
+            app.fuzzy_finder.input = None;
             Ok(())
         }
         _ => Ok(()),
@@ -397,6 +452,9 @@ fn abort(app: &mut App) {
         Mode::Search(context) => {
             app.mode = context.previous_input_mode();
             app.footer_input = None;
+        }
+        Mode::Normal if app.fuzzy_finder.is_active() => {
+            app.fuzzy_finder.input = None;
         }
         _ => (),
     }
