@@ -171,7 +171,7 @@ impl Entry {
         let path = self.path();
 
         for child in self.entries_mut() {
-            let child_name = child.borrow().name();
+            let child_name = child.borrow().file_name();
             *child.borrow_mut().path_mut() = path.join(child_name);
             child.borrow_mut().update_children_path();
         }
