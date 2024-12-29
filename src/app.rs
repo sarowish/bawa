@@ -200,18 +200,32 @@ impl App {
         self.mode = mode;
     }
 
-    pub fn create_folder(&mut self) -> Result<()> {
-        let text = std::mem::take(&mut self.footer_input.as_mut().unwrap().text);
+    pub fn extract_input(&mut self) -> String {
+        self.mode.select_previous();
+        self.footer_input.take().unwrap().text
+    }
 
-        if matches!(self.mode, Mode::FolderCreation(true))
+    pub fn abort_input(&mut self) {
+        self.mode.select_previous();
+        self.footer_input = None;
+    }
+
+    pub fn create_folder(&mut self, top_level: bool) -> Result<()> {
+        let file_name = self.extract_input();
+
+        if file_name.is_empty() {
+            return Err(anyhow::anyhow!("Name can't be empty."));
+        }
+
+        if top_level
             || self
                 .visible_entries
                 .get_selected()
                 .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
         {
             let profile = self.profiles.get_mut_profile().unwrap();
-            let path = profile.path.join(text);
-
+            let path = profile.path.join(file_name);
+            utils::check_for_dup(&path)?;
             std::fs::create_dir(&path)?;
         } else {
             let Some(selected_idx) = self.visible_entries.state.selected() else {
@@ -221,15 +235,14 @@ impl App {
             let idx = self.find_context(selected_idx).unwrap();
 
             if let Some(entry) = self.visible_entries.items.get(idx) {
-                let path = entry.borrow().path().join(text);
+                let path = entry.borrow().path().join(file_name);
+                utils::check_for_dup(&path)?;
                 std::fs::create_dir(&path)?;
             }
 
             self.open_fold_at_index(idx);
         }
 
-        self.footer_input = None;
-        self.mode = Mode::Normal;
         Ok(())
     }
 
@@ -271,23 +284,19 @@ impl App {
     }
 
     pub fn rename_selected_entry(&mut self) -> Result<()> {
+        let new_name = self.extract_input();
         let entry = self.visible_entries.get_selected().unwrap();
-        let text = &self.footer_input.as_ref().unwrap().text;
 
-        if text.is_empty() {
+        if new_name.is_empty() {
             return Err(anyhow::anyhow!("Name can't be empty."));
         }
 
         let old_path = entry.borrow().path();
 
         let mut new_path = old_path.clone();
-        new_path.set_file_name(text);
+        new_path.set_file_name(new_name);
 
-        utils::rename(&old_path, new_path)?;
-
-        self.footer_input = None;
-        self.mode = Mode::Normal;
-        Ok(())
+        utils::rename(&old_path, &new_path)
     }
 
     fn find_context(&self, idx: usize) -> Option<usize> {
@@ -707,8 +716,7 @@ impl App {
     }
 
     pub fn search_new_pattern(&mut self) {
-        let pattern = std::mem::take(&mut self.footer_input.as_mut().unwrap().text);
-
+        let pattern = self.extract_input();
         self.search = Search::new(&pattern);
         self.repeat_search();
     }

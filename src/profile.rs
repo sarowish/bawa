@@ -145,23 +145,26 @@ impl Profiles {
     }
 
     pub fn create_profile(name: &str) -> Result<()> {
-        let path = utils::get_data_dir()?.join(name);
+        if name.is_empty() {
+            return Err(anyhow::anyhow!("Name can't be empty."));
+        }
 
+        let path = utils::get_data_dir()?.join(name);
+        utils::check_for_dup(&path)?;
         std::fs::create_dir(&path)?;
 
         Ok(())
     }
 
-    pub fn rename_selected_profile(&mut self, name: &str) -> Result<()> {
-        if name.is_empty() {
-            return Ok(());
+    pub fn rename_selected_profile(&mut self, new_name: &str) -> Result<()> {
+        if new_name.is_empty() {
+            return Err(anyhow::anyhow!("Name can't be empty."));
         }
 
         if let Some(profile) = self.profiles.get_selected() {
             let mut new_path = profile.path.clone();
-            new_path.set_file_name(name);
-
-            fs::rename(&profile.path, &new_path)?;
+            new_path.set_file_name(new_name);
+            utils::rename(&profile.path, &new_path)?;
         }
 
         Ok(())

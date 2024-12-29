@@ -72,7 +72,7 @@ fn handle_rename_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     let mut new_path = entry_path.clone();
     new_path.set_file_name(new_name);
 
-    utils::rename(&entry_path, new_path)?;
+    utils::rename(&entry_path, &new_path)?;
 
     Ok(())
 }

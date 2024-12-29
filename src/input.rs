@@ -24,6 +24,24 @@ pub enum Mode {
     Search(SearchContext),
 }
 
+impl Mode {
+    pub fn select_previous(&mut self) {
+        *self = match self {
+            Mode::Confirmation(confirmation_context) => match confirmation_context {
+                ConfirmationContext::Deletion | ConfirmationContext::Replacing => Mode::Normal,
+                ConfirmationContext::ProfileDeletion => Mode::ProfileSelection,
+            },
+            Mode::Search(search_context) => match &search_context {
+                SearchContext::Normal => Mode::Normal,
+                SearchContext::ProfileSelection => Mode::ProfileSelection,
+            },
+            Mode::EntryRenaming | Mode::ProfileSelection | Mode::FolderCreation(_) => Mode::Normal,
+            Mode::ProfileCreation | Mode::ProfileRenaming => Mode::ProfileSelection,
+            Mode::Normal => unreachable!(),
+        };
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum ConfirmationContext {
     Deletion,
@@ -31,29 +49,11 @@ pub enum ConfirmationContext {
     ProfileDeletion,
 }
 
-impl ConfirmationContext {
-    pub fn previous_input_mode(self) -> Mode {
-        match self {
-            ConfirmationContext::Deletion | ConfirmationContext::Replacing => Mode::Normal,
-            ConfirmationContext::ProfileDeletion => Mode::ProfileSelection,
-        }
-    }
-}
-
 #[derive(Default)]
 pub enum SearchContext {
     #[default]
     Normal,
     ProfileSelection,
-}
-
-impl SearchContext {
-    pub fn previous_input_mode(&self) -> Mode {
-        match self {
-            SearchContext::Normal => Mode::Normal,
-            SearchContext::ProfileSelection => Mode::ProfileSelection,
-        }
-    }
 }
 
 enum InputChange {
@@ -364,7 +364,7 @@ fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut Help) -> bool {
 fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App, context: ConfirmationContext) {
     match key.code {
         KeyCode::Char('y') => app.on_confirmation(context),
-        KeyCode::Char('n') => app.mode = context.previous_input_mode(),
+        KeyCode::Char('n') => app.mode.select_previous(),
         _ => (),
     }
 }
@@ -396,24 +396,14 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
 fn complete(app: &mut App) {
     let res = match &app.mode {
         Mode::EntryRenaming => app.rename_selected_entry(),
-        Mode::FolderCreation(..) => app.create_folder(),
-        Mode::ProfileCreation => Profiles::create_profile(&app.footer_input.as_ref().unwrap().text)
-            .inspect(|()| {
-                app.mode = Mode::ProfileSelection;
-                app.footer_input = None;
-            }),
+        Mode::FolderCreation(top_level) => app.create_folder(*top_level),
+        Mode::ProfileCreation => Profiles::create_profile(&app.extract_input()),
         Mode::ProfileRenaming => {
-            let res = app
-                .profiles
-                .rename_selected_profile(&app.footer_input.as_ref().unwrap().text);
-            app.mode = Mode::ProfileSelection;
-            app.footer_input = None;
-            res
+            let new_name = app.extract_input();
+            app.profiles.rename_selected_profile(&new_name)
         }
-        Mode::Search(context) => {
-            app.mode = context.previous_input_mode();
+        Mode::Search(..) => {
             app.search_new_pattern();
-            app.footer_input = None;
             Ok(())
         }
         Mode::Normal
@@ -433,25 +423,20 @@ fn complete(app: &mut App) {
 
 fn abort(app: &mut App) {
     match &app.mode {
-        Mode::EntryRenaming | Mode::FolderCreation(..) => {
-            app.mode = Mode::Normal;
-            app.footer_input = None;
-        }
         Mode::ProfileSelection => {
             if app.profiles.get_profile().is_some() {
-                app.mode = Mode::Normal;
+                app.mode.select_previous();
             } else {
                 app.message
                     .set_warning("Can't abort while no profile is selected".to_string());
             }
         }
-        Mode::ProfileCreation | Mode::ProfileRenaming => {
-            app.mode = Mode::ProfileSelection;
-            app.footer_input = None;
-        }
-        Mode::Search(context) => {
-            app.mode = context.previous_input_mode();
-            app.footer_input = None;
+        Mode::EntryRenaming
+        | Mode::FolderCreation(..)
+        | Mode::ProfileCreation
+        | Mode::ProfileRenaming
+        | Mode::Search(..) => {
+            app.abort_input();
         }
         Mode::Normal if app.fuzzy_finder.is_active() => {
             app.fuzzy_finder.input = None;

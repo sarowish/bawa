@@ -37,14 +37,21 @@ pub fn validate_name(path: &mut PathBuf) {
     }
 }
 
-pub fn rename(from: &Path, mut to: PathBuf) -> Result<()> {
-    if from.is_file() {
-        validate_name(&mut to);
+pub fn check_for_dup(path: &Path) -> Result<()> {
+    if path.exists() {
+        Err(anyhow::anyhow!(
+            "A {} with the name {:?} already exists.",
+            if path.is_dir() { "directory" } else { "file" },
+            path.file_name().unwrap()
+        ))
+    } else {
+        Ok(())
     }
+}
 
-    fs::rename(from, &to)?;
-
-    Ok(())
+pub fn rename(from: &Path, to: &Path) -> Result<()> {
+    check_for_dup(to)?;
+    Ok(fs::rename(from, to)?)
 }
 
 pub fn is_steam_id(dir_name: &str) -> bool {
