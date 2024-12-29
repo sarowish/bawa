@@ -846,7 +846,7 @@ impl HandleFileSystemEvent for App {
         let moved = path.parent() != new_path.parent();
 
         if moved {
-            self.on_delete(path);
+            self.on_delete(path)?;
             self.on_create(new_path)?;
         }
 
@@ -867,10 +867,15 @@ impl HandleFileSystemEvent for App {
 
         Ok(())
     }
-    fn on_delete(&mut self, path: &Path) {
+    fn on_delete(&mut self, path: &Path) -> Result<()> {
         let Some(profile) = self.profiles.get_mut_profile() else {
-            return;
+            return Ok(());
         };
+
+        if matches!(profile.get_selected_save_file(), Ok(selected_save_file) if selected_save_file == path)
+        {
+            profile.delete_selected_save()?;
+        }
 
         let mut path_to_entry = profile.find_entry(path);
 
@@ -893,6 +898,8 @@ impl HandleFileSystemEvent for App {
             self.close_fold_at_index(idx);
             self.visible_entries.items.remove(idx);
         }
+
+        Ok(())
     }
 }
 

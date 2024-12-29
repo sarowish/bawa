@@ -157,16 +157,14 @@ impl From<NotifyEvent> for FileSystemEvent {
 pub trait HandleFileSystemEvent {
     fn on_create(&mut self, path: &Path) -> Result<()>;
     fn on_rename(&mut self, path: &Path, new_path: &Path) -> Result<()>;
-    fn on_delete(&mut self, path: &Path);
+    fn on_delete(&mut self, path: &Path) -> Result<()>;
     fn handle_file_system_event(&mut self, event: &FileSystemEvent) -> Result<()> {
         let path = &event.path;
 
         match event.kind {
-            Kind::Create => self.on_create(path)?,
-            Kind::Rename(ref new_path) => self.on_rename(path, new_path)?,
+            Kind::Create => self.on_create(path),
+            Kind::Rename(ref new_path) => self.on_rename(path, new_path),
             Kind::Delete => self.on_delete(path),
         }
-
-        Ok(())
     }
 }

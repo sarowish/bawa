@@ -60,6 +60,12 @@ impl Profile {
         self.path.join("selected_save_file")
     }
 
+    pub fn delete_selected_save(&self) -> Result<()> {
+        let path = self.get_selected_save_path();
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
     pub fn update_selected_save_file(&self, path: &Path) -> Result<()> {
         let file_path = self.get_selected_save_path();
         let mut file = File::create(file_path)?;
@@ -232,7 +238,7 @@ impl HandleFileSystemEvent for Profiles {
         Ok(())
     }
 
-    fn on_delete(&mut self, path: &Path) {
+    fn on_delete(&mut self, path: &Path) -> Result<()> {
         let items = &self.profiles.items;
         if let Some(idx) = items.iter().position(|profile| profile.path == path) {
             self.profiles.items.remove(idx);
@@ -241,5 +247,7 @@ impl HandleFileSystemEvent for Profiles {
                 self.active_profile = None;
             }
         };
+
+        Ok(())
     }
 }
