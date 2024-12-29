@@ -1,4 +1,4 @@
-use crate::{app::StatefulList, input::Input};
+use crate::{app::StatefulList, input::Input, utils};
 use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
     Config, Matcher, Utf32String,
@@ -63,11 +63,13 @@ impl MatchedItem {
         }
 
         let mut prev_idx = 0;
+        let upper_boundary_map = utils::upper_char_boundaries(text);
 
         for (idx, pair) in highlighted_indices.windows(2).enumerate() {
             if pair[0] != pair[1] {
-                slices.push((&text[prev_idx..=idx], pair[0]));
-                prev_idx = idx + 1;
+                let idx = upper_boundary_map[idx];
+                slices.push((&text[prev_idx..idx], pair[0]));
+                prev_idx = idx;
             }
         }
 
@@ -138,5 +140,37 @@ impl FuzzyFinder {
 
     pub fn is_active(&self) -> bool {
         self.input.is_some()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::search::MatchedItem;
+
+    #[test]
+    fn fuzzy_unicode() {
+        let item = MatchedItem::new("türkçe".to_string(), None, &[1, 2]);
+
+        assert_eq!(
+            item.highlight_slices(),
+            vec![("t", false), ("ür", true), ("kçe", false)]
+        );
+    }
+
+    #[test]
+    fn fuzzy_unicode2() {
+        let item = MatchedItem::new("türkçe".to_string(), None, &[0]);
+
+        assert_eq!(item.highlight_slices(), vec![("t", true), ("ürkçe", false)]);
+    }
+
+    #[test]
+    fn fuzzy_postfix() {
+        let item = MatchedItem::new("some text".to_string(), None, &[6, 7, 8]);
+
+        assert_eq!(
+            item.highlight_slices(),
+            vec![("some t", false), ("ext", true)]
+        );
     }
 }

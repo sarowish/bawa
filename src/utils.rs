@@ -104,3 +104,9 @@ pub fn get_relative_path(parent: &Path, child: &Path) -> Result<String> {
     path.extend(components);
     Ok(path.to_string_lossy().to_string())
 }
+
+pub fn upper_char_boundaries(text: &str) -> Vec<usize> {
+    (1..=text.len())
+        .filter(|idx| text.is_char_boundary(*idx))
+        .collect()
+}
