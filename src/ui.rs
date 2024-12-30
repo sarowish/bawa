@@ -5,7 +5,7 @@ use crate::{
     input::{ConfirmationContext, Input, Mode, SearchContext},
     message::Kind as MessageKind,
     search::FuzzyFinder,
-    utils,
+    utils, THEME,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
@@ -125,9 +125,9 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
                             .map(|profile| profile.name.clone())
                             .unwrap_or_default(),
                     )
-                    .title_style(Style::new().cyan().bold()),
+                    .title_style(THEME.title),
             )
-            .highlight_style(Style::new().magenta().bold())
+            .highlight_style(THEME.selected)
     };
 
     f.render_stateful_widget(entries, area, &mut selected_entries.state);
@@ -144,7 +144,7 @@ fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) 
     let input = fuzzy_finder.input.as_ref().unwrap();
     let search = Paragraph::new(input.text.clone()).block(
         Block::default()
-            .title(Span::styled("Search", Style::default().cyan().bold()))
+            .title(Span::styled("Search", THEME.title))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded),
     );
@@ -161,9 +161,9 @@ fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) 
                 line.into_iter()
                     .map(|(slice, highlighted)| {
                         if highlighted {
-                            Span::styled(slice, Style::default().yellow())
+                            Span::styled(slice, THEME.highlight)
                         } else if selected_idx == idx {
-                            Span::styled(slice, Style::default().magenta())
+                            Span::styled(slice, THEME.fuzzy_selected)
                         } else {
                             Span::raw(slice)
                         }
@@ -175,7 +175,7 @@ fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) 
     ))
     .block(
         Block::default()
-            .title(Span::styled("Results", Style::default().cyan().bold()))
+            .title(Span::styled("Results", THEME.title))
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded),
     );
@@ -192,12 +192,7 @@ fn draw_help(f: &mut Frame, help: &mut Help) {
     let help_entries = help
         .bindings
         .iter()
-        .map(|(key, desc)| {
-            Line::from(vec![
-                Span::styled(key, Style::new().green()),
-                Span::raw(*desc),
-            ])
-        })
+        .map(|(key, desc)| Line::from(vec![Span::styled(key, THEME.help), Span::raw(*desc)]))
         .collect::<Vec<Line>>();
 
     help.max_scroll = help_entries
@@ -213,7 +208,7 @@ fn draw_help(f: &mut Frame, help: &mut Help) {
     let mut help_text = Paragraph::new(help_entries).scroll((help.scroll, 0)).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(Span::styled("Help", Style::new().cyan().bold())),
+            .title(Span::styled("Help", THEME.title)),
     );
 
     if window.width > 0 {
@@ -242,7 +237,7 @@ fn draw_list_with_help<T: Display>(
     let mut spans = Vec::new();
 
     for entry in help_entries {
-        spans.push(Span::styled(entry.0.clone(), Style::new().green()));
+        spans.push(Span::styled(entry.0.clone(), THEME.help));
         spans.push(Span::raw(entry.1));
     }
 
@@ -276,7 +271,7 @@ fn draw_list_with_help<T: Display>(
         Block::default()
             .borders(Borders::ALL)
             .title(title)
-            .title_style(Style::new().cyan().bold()),
+            .title_style(THEME.title),
         window,
     );
 
@@ -299,7 +294,7 @@ fn draw_list_with_help<T: Display>(
         .map(ListItem::new)
         .collect::<Vec<ListItem>>();
 
-    let w = List::new(list_items).highlight_style(Style::new().magenta().bold());
+    let w = List::new(list_items).highlight_style(THEME.selected);
 
     f.render_stateful_widget(w, entry_area, &mut list.state);
     f.render_widget(help_widget, help_area);
@@ -316,13 +311,12 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         set_cursor(f, input, area);
         Line::from(Span::raw(format!("{}{}", input.prompt, input.text)))
     } else if !app.message.is_empty() {
-        let style = Style::default();
         Line::from(Span::styled(
             app.message.to_string(),
             match app.message.kind {
-                MessageKind::Info => style,
-                MessageKind::Error => style.red(),
-                MessageKind::Warning => style.yellow(),
+                MessageKind::Info => Style::default(),
+                MessageKind::Error => THEME.error,
+                MessageKind::Warning => THEME.warning,
             },
         ))
     } else {
@@ -374,9 +368,9 @@ impl Widget for ConfirmationPrompt {
         Clear.render(area, buf);
 
         Block::bordered()
-            .title(Line::styled(self.title, Style::default().blue()))
+            .title(Line::styled(self.title, THEME.confirmation_border))
             .border_type(BorderType::Rounded)
-            .border_style(Style::new().blue())
+            .border_style(THEME.confirmation_border)
             .title_alignment(Alignment::Center)
             .render(area, buf);
 
@@ -392,7 +386,7 @@ impl Widget for ConfirmationPrompt {
         let mut text = Paragraph::new(Line::from(line)).block(
             Block::default()
                 .borders(Borders::BOTTOM)
-                .border_style(Style::new().blue()),
+                .border_style(THEME.confirmation_border),
         );
 
         if chunks[0].width > 0 {

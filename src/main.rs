@@ -1,6 +1,6 @@
 use clap::ArgMatches;
 use cli::handle_subcommands;
-use config::{keys::KeyBindings, options::Options, Config};
+use config::{keys::KeyBindings, options::Options, theme::Theme, Config};
 use std::sync::LazyLock;
 
 mod app;
@@ -28,6 +28,7 @@ static CONFIG: LazyLock<Config> = LazyLock::new(|| match Config::new() {
 });
 static OPTIONS: LazyLock<&'static Options> = LazyLock::new(|| &CONFIG.options);
 static KEY_BINDINGS: LazyLock<&'static KeyBindings> = LazyLock::new(|| &CONFIG.key_bindings);
+static THEME: LazyLock<&'static Theme> = LazyLock::new(|| &CONFIG.theme);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

@@ -1,5 +1,6 @@
 pub mod keys;
 pub mod options;
+pub mod theme;
 
 use self::{
     keys::{KeyBindings, UserKeyBindings},
@@ -13,6 +14,7 @@ use std::{
     io::Write,
     path::PathBuf,
 };
+use theme::{Theme, UserTheme};
 
 const CONFIG_FILE: &str = "config.toml";
 
@@ -20,12 +22,14 @@ const CONFIG_FILE: &str = "config.toml";
 struct UserConfig {
     #[serde(flatten)]
     options: UserOptions,
+    theme: Option<UserTheme>,
     key_bindings: Option<UserKeyBindings>,
 }
 
 #[derive(Default)]
 pub struct Config {
     pub options: Options,
+    pub theme: Theme,
     pub key_bindings: KeyBindings,
 }
 
@@ -72,6 +76,10 @@ impl TryFrom<UserConfig> for Config {
             options: user_config.options.into(),
             ..Default::default()
         };
+
+        if let Some(theme) = user_config.theme {
+            config.theme = theme.try_into()?;
+        }
 
         if let Some(key_bindings) = user_config.key_bindings {
             config.key_bindings = key_bindings.try_into()?;
