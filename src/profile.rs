@@ -232,7 +232,7 @@ impl HandleFileSystemEvent for Profiles {
 
         if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
             for entry in &profile.entries {
-                let entry_name = entry.borrow().name();
+                let entry_name = entry.borrow().file_name();
                 *entry.borrow_mut().path_mut() = profile.path.join(entry_name);
                 entry.borrow_mut().update_children_path();
             }
