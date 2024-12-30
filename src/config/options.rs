@@ -106,6 +106,7 @@ pub fn pick_save_file_path() -> Result<PathBuf> {
         if input.is_empty() || input == "y" || input == "yes" {
             return Ok(paths[0].clone());
         }
+        std::process::exit(0);
     } else {
         println!("No save file path is specified. You can specify it in the configuration file or pick one of the paths below:\n");
         for (idx, path) in paths.iter().enumerate() {
@@ -116,7 +117,7 @@ pub fn pick_save_file_path() -> Result<PathBuf> {
             );
         }
 
-        print!("\nEnter a number (you can type something invalid to cancel): ");
+        print!("\nEnter a number: ");
 
         io::stdout().flush().unwrap();
         io::stdin().read_line(&mut input).unwrap();
@@ -125,7 +126,7 @@ pub fn pick_save_file_path() -> Result<PathBuf> {
         if (1..=paths.len()).contains(&idx) {
             return Ok(paths[idx.saturating_sub(1)].clone());
         }
-    }
 
-    Err(anyhow::anyhow!("Didn't enter a valid number"))
+        Err(anyhow::anyhow!("Didn't enter a valid number"))
+    }
 }
