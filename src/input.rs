@@ -75,7 +75,7 @@ impl Input {
     pub fn new(mode: &Mode) -> Self {
         let prompt = match mode {
             Mode::Search(_) => "/",
-            Mode::ProfileCreation => "Profile Name:",
+            Mode::ProfileCreation => "Profile Name: ",
             Mode::EntryRenaming | Mode::ProfileRenaming => "Rename: ",
             Mode::FolderCreation(_) => "Folder Name: ",
             Mode::Normal => "",
