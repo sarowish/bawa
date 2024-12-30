@@ -67,6 +67,7 @@ impl App {
         let mut terminal = ratatui::init();
         let mut term_events = EventStream::new();
 
+        self.auto_mark_save_file();
         self.watcher.watch_profiles(&utils::get_data_dir()?);
 
         if let Some(profile) = self.profiles.get_profile() {
@@ -141,6 +142,7 @@ impl App {
         if let Ok(selected_new_profile) = self.profiles.select_profile() {
             if selected_new_profile {
                 self.load_entries();
+                self.auto_mark_save_file();
                 self.watcher
                     .watch_profile_entries(&self.profiles.get_profile().unwrap().path);
 
@@ -476,10 +478,7 @@ impl App {
 
     pub fn on_up(&mut self) {
         self.visible_entries.previous();
-
-        if OPTIONS.auto_mark_save_file {
-            self.mark_selected_save_file();
-        }
+        self.auto_mark_save_file();
     }
     pub fn on_right(&mut self) {
         if let Some(idx) = self.visible_entries.state.selected() {
@@ -489,26 +488,17 @@ impl App {
 
     pub fn on_down(&mut self) {
         self.visible_entries.next();
-
-        if OPTIONS.auto_mark_save_file {
-            self.mark_selected_save_file();
-        }
+        self.auto_mark_save_file();
     }
 
     pub fn select_first(&mut self) {
         self.visible_entries.select_first();
-
-        if OPTIONS.auto_mark_save_file {
-            self.mark_selected_save_file();
-        }
+        self.auto_mark_save_file();
     }
 
     pub fn select_last(&mut self) {
         self.visible_entries.select_last();
-
-        if OPTIONS.auto_mark_save_file {
-            self.mark_selected_save_file();
-        }
+        self.auto_mark_save_file();
     }
 
     pub fn up_directory(&mut self) {
@@ -608,7 +598,10 @@ impl App {
         }
 
         match self.mode {
-            Mode::Normal => self.visible_entries.state.select(new_idx),
+            Mode::Normal => {
+                self.visible_entries.state.select(new_idx);
+                self.auto_mark_save_file();
+            }
             Mode::ProfileSelection => self.profiles.profiles.state.select(new_idx),
             _ => unreachable!(),
         };
@@ -642,6 +635,12 @@ impl App {
                     self.message.set_error(e.to_string());
                 }
             }
+        }
+    }
+
+    pub fn auto_mark_save_file(&mut self) {
+        if OPTIONS.auto_mark_save_file {
+            self.mark_selected_save_file();
         }
     }
 
@@ -800,6 +799,7 @@ impl App {
                 if entry.borrow().file_name() == component {
                     if entry.borrow().is_file() {
                         self.visible_entries.state.select(Some(idx));
+                        self.auto_mark_save_file();
                         return;
                     }
 
