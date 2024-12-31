@@ -200,6 +200,7 @@ impl App {
     pub fn take_input(&mut self, mode: Mode) {
         self.footer_input = Some(Input::new(&mode));
         self.mode = mode;
+        self.message.clear();
     }
 
     pub fn extract_input(&mut self) -> String {
@@ -253,8 +254,6 @@ impl App {
             return;
         };
 
-        self.mode = Mode::EntryRenaming;
-
         let mut file_name = entry.borrow().file_name();
 
         if let Some(empty_opt) = &OPTIONS.rename.empty {
@@ -270,7 +269,9 @@ impl App {
             }
         }
 
-        let mut input = Input::with_text(&file_name);
+        self.take_input(Mode::EntryRenaming);
+        let input = self.footer_input.as_mut().unwrap();
+        input.set_text(&file_name);
 
         match OPTIONS.rename.cursor {
             options::RenameCursor::End => (),
@@ -281,8 +282,6 @@ impl App {
                 }
             }
         }
-
-        self.footer_input = Some(input);
     }
 
     pub fn rename_selected_entry(&mut self) -> Result<()> {

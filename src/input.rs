@@ -92,15 +92,10 @@ impl Input {
         }
     }
 
-    pub fn with_text(text: &str) -> Self {
-        Self {
-            text: text.to_string(),
-            prompt: String::from("Rename: "),
-            idx: text.len(),
-            cursor_position: text.width() as u16,
-            cursor_offset: 8,
-            change: None,
-        }
+    pub fn set_text(&mut self, text: &str) {
+        self.text = text.to_string();
+        self.idx = text.len();
+        self.cursor_position = text.width() as u16;
     }
 
     pub fn cursor_position(&self) -> u16 {
@@ -306,13 +301,11 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
 
     if let Some(command) = KEY_BINDINGS.profile_selection.get(&key) {
         match command {
-            ProfileSelectionCommand::Create => {
-                app.mode = Mode::ProfileCreation;
-                app.footer_input = Some(Input::new(&Mode::ProfileCreation));
-            }
+            ProfileSelectionCommand::Create => app.take_input(Mode::ProfileCreation),
             ProfileSelectionCommand::Rename => {
-                app.mode = Mode::ProfileRenaming;
-                app.footer_input = Some(Input::with_text(&profiles.get_selected().unwrap().name));
+                let text = profiles.get_selected().unwrap().name.clone();
+                app.take_input(Mode::ProfileRenaming);
+                app.footer_input.as_mut().unwrap().set_text(&text);
             }
             ProfileSelectionCommand::Delete => {
                 app.prompt_for_confirmation(ConfirmationContext::ProfileDeletion);
