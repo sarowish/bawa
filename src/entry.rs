@@ -15,7 +15,6 @@ pub enum Entry {
         name: String,
         path: PathBuf,
         depth: usize,
-        last_item: bool,
     },
     Folder {
         name: String,
@@ -23,7 +22,6 @@ pub enum Entry {
         entries: Vec<Rc<RefCell<Entry>>>,
         is_fold_opened: bool,
         depth: usize,
-        last_item: bool,
     },
 }
 
@@ -53,12 +51,7 @@ impl Entry {
         let name = set_name_helper(&path);
 
         Ok(if path.is_file() {
-            Self::File {
-                name,
-                path,
-                depth,
-                last_item: false,
-            }
+            Self::File { name, path, depth }
         } else {
             Self::Folder {
                 entries: Self::entries_from_path(&path, depth + 1)?,
@@ -66,7 +59,6 @@ impl Entry {
                 path,
                 is_fold_opened: false,
                 depth,
-                last_item: false,
             }
         })
     }
@@ -226,22 +218,10 @@ impl Entry {
         }
     }
 
-    pub fn last_item(&self) -> bool {
-        *match self {
-            Entry::File { last_item, .. } | Entry::Folder { last_item, .. } => last_item,
-        }
-    }
-
-    pub fn last_item_mut(&mut self) -> &mut bool {
-        match self {
-            Entry::File { last_item, .. } | Entry::Folder { last_item, .. } => last_item,
-        }
-    }
-
-    pub fn to_spans<'b>(&self) -> Vec<Span<'b>> {
+    pub fn to_spans<'b>(&self, last_item: bool) -> Vec<Span<'b>> {
         vec![
             Span::styled(
-                if self.last_item() {
+                if last_item {
                     let mut lines = "  │ ".repeat(self.depth() - 1);
                     lines.push_str("  └ ");
                     lines
@@ -261,6 +241,22 @@ impl Entry {
             Span::raw(self.name()),
         ]
     }
+}
+
+pub fn entries_to_spans(entries: &[RcEntry]) -> Vec<Vec<Span>> {
+    let mut items: Vec<_> = entries
+        .windows(2)
+        .map(|pair| {
+            let entry = pair[0].borrow();
+            entry.to_spans(entry.depth() > pair[1].borrow().depth())
+        })
+        .collect();
+
+    if let Some(last_entry) = entries.last().map(|entry| entry.borrow()) {
+        items.push(last_entry.to_spans(last_entry.depth() != 0));
+    }
+
+    items
 }
 
 fn set_name_helper(path: &Path) -> String {

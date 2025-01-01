@@ -353,14 +353,6 @@ impl App {
             return false;
         };
 
-        for entry in &children {
-            *entry.borrow_mut().last_item_mut() = false;
-        }
-
-        if let Some(entry) = children.last() {
-            *entry.borrow_mut().last_item_mut() = true;
-        }
-
         idx += 1;
         self.visible_entries.items.splice(idx..idx, children);
 

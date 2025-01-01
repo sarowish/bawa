@@ -1,6 +1,6 @@
 use crate::{
     app::{App, StatefulList},
-    entry::Entry,
+    entry::entries_to_spans,
     help::Help,
     input::{ConfirmationContext, Input, Mode, SearchContext},
     message::Kind as MessageKind,
@@ -14,19 +14,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Widget, Wrap},
     Frame,
 };
-use std::{cell::RefCell, fmt::Display, rc::Rc};
-
-pub fn entries_to_list_items(entries: &[Rc<RefCell<Entry>>]) -> Vec<ListItem> {
-    //let items = traverse_entries(entries, 0);
-    let items = entries
-        .iter()
-        .map(|entry| entry.borrow().to_spans())
-        .map(Line::from)
-        .map(ListItem::new)
-        .collect();
-
-    items
-}
+use std::fmt::Display;
 
 fn popup_window_from_dimensions(height: u16, width: u16, r: Rect) -> Rect {
     let hor = [Constraint::Length(width)];
@@ -110,8 +98,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
-    let selected_entries = &mut app.visible_entries;
-    let entries = entries_to_list_items(&selected_entries.items);
+    let visible_entries = &mut app.visible_entries;
+    let entries = entries_to_spans(&visible_entries.items)
+        .into_iter()
+        .map(Line::from)
+        .map(ListItem::new);
 
     let entries = {
         List::new(entries)
@@ -130,7 +121,7 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
             .highlight_style(THEME.selected)
     };
 
-    f.render_stateful_widget(entries, area, &mut selected_entries.state);
+    f.render_stateful_widget(entries, area, &mut visible_entries.state);
 }
 
 fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {

@@ -1,4 +1,4 @@
-use crate::{app::App, profile::Profiles, utils, CLAP_ARGS};
+use crate::{app::App, entry::entries_to_spans, profile::Profiles, utils, CLAP_ARGS};
 use anyhow::{Context, Result};
 use clap::ArgMatches;
 use crossterm::style::Stylize;
@@ -28,9 +28,7 @@ pub fn handle_list_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()> {
 
     app.open_all_folds();
 
-    for item in &app.visible_entries.items {
-        let spans = item.borrow().to_spans();
-
+    for spans in entries_to_spans(&app.visible_entries.items) {
         print!("{}", spans[0].content.dark_grey());
         println!("{}{}", spans[1], spans[2]);
     }
