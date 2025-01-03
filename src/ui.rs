@@ -175,7 +175,7 @@ fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) 
 }
 
 fn draw_help(f: &mut Frame, help: &mut Help) {
-    let window = popup_window_from_dimensions(30, 80, f.area());
+    let window = popup_window_from_dimensions(45, 80, f.area());
     f.render_widget(Clear, window);
 
     let width = std::cmp::max(window.width.saturating_sub(2), 1);
