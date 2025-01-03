@@ -306,6 +306,37 @@ impl App {
         utils::rename(&old_path, &new_path)
     }
 
+    pub fn move_entries(&mut self, top_level: bool) {
+        let base_path = if top_level
+            || self
+                .visible_entries
+                .get_selected()
+                .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
+        {
+            self.profiles.get_profile().unwrap().path.clone()
+        } else {
+            let selected_idx = self.visible_entries.state.selected().unwrap();
+            let idx = self.find_context(selected_idx).unwrap();
+            self.visible_entries.items[idx].borrow().path()
+        };
+
+        let mut fail = false;
+
+        for (_, entry) in self.marked_entries.drain() {
+            let new_path = base_path.join(entry.borrow().file_name());
+            if utils::check_for_dup(&new_path).is_err()
+                || std::fs::rename(entry.borrow().path(), new_path).is_err()
+            {
+                fail = true;
+            };
+        }
+
+        if fail {
+            self.message
+                .set_error("Couldn't move some of the files".to_string());
+        }
+    }
+
     fn find_context(&self, idx: usize) -> Option<usize> {
         let entry = self.visible_entries.items.get(idx)?;
 

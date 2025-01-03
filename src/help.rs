@@ -2,7 +2,7 @@ use crate::KEY_BINDINGS;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 
-const DESCRIPTIONS_LEN: usize = 29;
+const DESCRIPTIONS_LEN: usize = 31;
 const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Go one line downward",                                 // On Down
     "Go one line upward",                                   // On Up
@@ -22,6 +22,8 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Create folder",                                        // Create Folder
     "Create folder in the top level",                       // Create Folder Top Level
     "Rename the selected file/folder",                      // Rename
+    "Move the selected entries into the current folder",    // Move Entries
+    "Move the selected entries to the top level",           // Move Entries Top Level
     "Open all folds",                                       // Open All Folds
     "Close all folds",                                      // Close All Folds
     "Open profile selection window",                        // Select Profile

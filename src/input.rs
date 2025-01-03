@@ -281,6 +281,8 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::CreateFolder => app.take_input(Mode::FolderCreation(false)),
             Command::CreateFolderTopLevel => app.take_input(Mode::FolderCreation(true)),
             Command::Rename => app.enter_renaming(),
+            Command::MoveEntries => app.move_entries(false),
+            Command::MoveEntriesTopLevel => app.move_entries(true),
             Command::OpenAllFolds => app.open_all_folds(),
             Command::CloseAllFolds => app.close_all_folds(),
             Command::SelectProfile => app.select_profile(),
