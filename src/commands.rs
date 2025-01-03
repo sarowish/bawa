@@ -26,6 +26,8 @@ pub enum Command {
     RepeatLastSearch,
     RepeatLastSearchBackward,
     OpenFuzzyFinder,
+    MarkEntry,
+    Reset,
     Quit,
 }
 
@@ -60,6 +62,8 @@ impl TryFrom<&str> for Command {
             "repeat_last_search" => Command::RepeatLastSearch,
             "repeat_last_search_backward" => Command::RepeatLastSearchBackward,
             "open_fuzzy_finder" => Command::OpenFuzzyFinder,
+            "mark_entry" => Command::MarkEntry,
+            "reset" => Command::Reset,
             "quit" => Command::Quit,
             _ => anyhow::bail!("\"{}\" is an invalid command", command),
         };

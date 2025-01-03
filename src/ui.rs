@@ -99,7 +99,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
 fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     let visible_entries = &mut app.visible_entries;
-    let entries = entries_to_spans(&visible_entries.items)
+    let entries = entries_to_spans(&visible_entries.items, &app.marked_entries)
         .into_iter()
         .map(Line::from)
         .map(ListItem::new);
@@ -326,15 +326,30 @@ pub struct ConfirmationPrompt {
 impl ConfirmationPrompt {
     pub fn new(app: &App, context: ConfirmationContext) -> Self {
         let title = match context {
-            ConfirmationContext::Deletion => "Permanently delete 1 selected file",
-            ConfirmationContext::Replacing => "Overwrite the selected file",
-            ConfirmationContext::ProfileDeletion => "Permanently delete the selected profile",
+            ConfirmationContext::Deletion => {
+                let (count, postfix) = if app.marked_entries.is_empty() {
+                    (1, "")
+                } else {
+                    (app.marked_entries.len(), "s")
+                };
+                format!("Permanently delete {count} selected file{postfix}")
+            }
+            ConfirmationContext::Replacing => "Overwrite the selected file".to_string(),
+            ConfirmationContext::ProfileDeletion => {
+                "Permanently delete the selected profile".to_string()
+            }
         };
+        let base_path = &app.profiles.get_profile().unwrap().path;
 
         let body = match context {
+            ConfirmationContext::Deletion if !app.marked_entries.is_empty() => app
+                .marked_entries
+                .keys()
+                .map(|path| utils::get_relative_path(base_path, path).unwrap())
+                .collect(),
             ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
                 vec![utils::get_relative_path(
-                    &app.profiles.get_profile().unwrap().path,
+                    base_path,
                     &app.visible_entries.get_selected().unwrap().borrow().path(),
                 )
                 .unwrap()]
@@ -371,14 +386,12 @@ impl Widget for ConfirmationPrompt {
             .margin(1)
             .split(area);
 
-        let mut line = self.body[0].clone();
-        line.insert(0, ' ');
-
-        let mut text = Paragraph::new(Line::from(line)).block(
-            Block::default()
-                .borders(Borders::BOTTOM)
-                .border_style(THEME.confirmation_border),
-        );
+        let mut text = Paragraph::new(self.body.into_iter().map(Line::from).collect::<Vec<Line>>())
+            .block(
+                Block::default()
+                    .borders(Borders::BOTTOM)
+                    .border_style(THEME.confirmation_border),
+            );
 
         if chunks[0].width > 0 {
             text = text.wrap(Wrap { trim: false });

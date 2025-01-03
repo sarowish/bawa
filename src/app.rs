@@ -1,6 +1,6 @@
 use crate::{
     config::options,
-    entry::Entry,
+    entry::{Entry, RcEntry},
     event::Event,
     help::Help,
     input::{self, ConfirmationContext, Input, Mode},
@@ -19,14 +19,16 @@ use futures::StreamExt;
 use ratatui::widgets::ListState;
 use std::{
     cell::RefCell,
-    path::{self, Path},
+    collections::HashMap,
+    path::{self, Path, PathBuf},
     rc::Rc,
 };
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 pub struct App {
     pub profiles: Profiles,
-    pub visible_entries: StatefulList<Rc<RefCell<Entry>>>,
+    pub visible_entries: StatefulList<RcEntry>,
+    pub marked_entries: HashMap<PathBuf, RcEntry>,
     pub footer_input: Option<Input>,
     pub mode: Mode,
     pub help: Help,
@@ -40,11 +42,11 @@ pub struct App {
 impl App {
     pub fn new() -> Result<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
-
         let mut app = Self {
             message: Message::new(tx.clone()),
             profiles: Profiles::new()?,
             visible_entries: StatefulList::with_items(Vec::new()),
+            marked_entries: HashMap::new(),
             footer_input: None,
             mode: Mode::Normal,
             help: Help::new(),
@@ -187,11 +189,15 @@ impl App {
     }
 
     pub fn delete_selected_entry(&mut self) -> Result<()> {
-        let Some(selected_entry) = self.visible_entries.get_selected() else {
+        if !self.marked_entries.is_empty() {
+            for (_, entry) in self.marked_entries.drain() {
+                entry.borrow().delete()?;
+            }
+        } else if let Some(selected_entry) = self.visible_entries.get_selected() {
+            selected_entry.borrow().delete()?;
+        } else {
             return Ok(());
         };
-
-        selected_entry.borrow().delete()?;
 
         self.mode = Mode::Normal;
         Ok(())
@@ -803,6 +809,17 @@ impl App {
             }
         }
     }
+
+    pub fn mark_entry(&mut self) {
+        if let Some(entry) = self.visible_entries.get_selected() {
+            let path = entry.borrow().path();
+            if self.marked_entries.remove(&path).is_none() {
+                self.marked_entries.insert(path, entry.clone());
+            }
+
+            self.visible_entries.next();
+        };
+    }
 }
 
 impl HandleFileSystemEvent for App {
@@ -844,6 +861,10 @@ impl HandleFileSystemEvent for App {
     fn on_rename(&mut self, path: &Path, new_path: &Path) -> Result<()> {
         let moved = path.parent() != new_path.parent();
 
+        if let Some(entry) = self.marked_entries.remove(path) {
+            self.marked_entries.insert(new_path.to_path_buf(), entry);
+        }
+
         if moved {
             self.on_delete(path)?;
             self.on_create(new_path)?;
@@ -875,6 +896,8 @@ impl HandleFileSystemEvent for App {
         {
             profile.delete_selected_save()?;
         }
+
+        self.marked_entries.remove(path);
 
         let mut path_to_entry = profile.find_entry(path);
 

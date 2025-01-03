@@ -128,6 +128,7 @@ fn parse_modifiers(modifiers: &str) -> Result<Modifier> {
 pub struct UserTheme {
     title: Option<UserStyle>,
     selected: Option<UserStyle>,
+    marked: Option<UserStyle>,
     fuzzy_selected: Option<UserStyle>,
     highlight: Option<UserStyle>,
     confirmation_border: Option<UserStyle>,
@@ -139,6 +140,7 @@ pub struct UserTheme {
 pub struct Theme {
     pub title: Style,
     pub selected: Style,
+    pub marked: Style,
     pub fuzzy_selected: Style,
     pub highlight: Style,
     pub confirmation_border: Style,
@@ -156,6 +158,9 @@ impl Default for Theme {
             selected: Style::default()
                 .fg(Color::Magenta)
                 .add_modifier(Modifier::BOLD),
+            marked: Style::default()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::CROSSED_OUT),
             fuzzy_selected: Style::default().fg(Color::Magenta),
             highlight: Style::default().fg(Color::Yellow),
             confirmation_border: Style::default().fg(Color::Blue),
@@ -184,6 +189,7 @@ impl TryFrom<UserTheme> for Theme {
 
         set_theme_field!(title);
         set_theme_field!(selected);
+        set_theme_field!(marked);
         set_theme_field!(fuzzy_selected);
         set_theme_field!(highlight);
         set_theme_field!(confirmation_border);

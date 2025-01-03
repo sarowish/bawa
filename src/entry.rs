@@ -1,8 +1,12 @@
-use crate::OPTIONS;
+use crate::{OPTIONS, THEME};
 use anyhow::Result;
-use ratatui::{style::Color, text::Span};
+use ratatui::{
+    style::{Color, Style},
+    text::Span,
+};
 use std::{
     cell::RefCell,
+    collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
 };
@@ -218,7 +222,7 @@ impl Entry {
         }
     }
 
-    pub fn to_spans<'b>(&self, last_item: bool) -> Vec<Span<'b>> {
+    pub fn to_spans<'b>(&self, last_item: bool, selected: bool) -> Vec<Span<'b>> {
         vec![
             Span::styled(
                 if last_item {
@@ -238,22 +242,34 @@ impl Entry {
                 }
                 .to_string(),
             ),
-            Span::raw(self.name()),
+            Span::styled(
+                self.name(),
+                if selected {
+                    THEME.marked
+                } else {
+                    Style::default()
+                },
+            ),
         ]
     }
 }
 
-pub fn entries_to_spans(entries: &[RcEntry]) -> Vec<Vec<Span>> {
+pub fn entries_to_spans<'a>(
+    entries: &'a [RcEntry],
+    marked_entries: &HashMap<PathBuf, RcEntry>,
+) -> Vec<Vec<Span<'a>>> {
     let mut items: Vec<_> = entries
         .windows(2)
         .map(|pair| {
             let entry = pair[0].borrow();
-            entry.to_spans(entry.depth() > pair[1].borrow().depth())
+            let selected = marked_entries.contains_key(&entry.path());
+            entry.to_spans(entry.depth() > pair[1].borrow().depth(), selected)
         })
         .collect();
 
     if let Some(last_entry) = entries.last().map(|entry| entry.borrow()) {
-        items.push(last_entry.to_spans(last_entry.depth() != 0));
+        let selected = marked_entries.contains_key(&last_entry.path());
+        items.push(last_entry.to_spans(last_entry.depth() != 0, selected));
     }
 
     items

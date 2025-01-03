@@ -120,6 +120,8 @@ impl Default for KeyBindings {
         insert_binding!(general, "n", Command::RepeatLastSearch);
         insert_binding!(general, "N", Command::RepeatLastSearchBackward);
         insert_binding!(general, "s", Command::OpenFuzzyFinder);
+        insert_binding!(general, "space", Command::MarkEntry);
+        insert_binding!(general, "esc", Command::Reset);
         insert_binding!(general, "q", Command::Quit);
         insert_binding!(general, "ctrl-c", Command::Quit);
 
