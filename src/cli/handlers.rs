@@ -45,7 +45,7 @@ pub fn handle_load_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
         app.load_save_file(&profile.path.join(relative_path))?;
         Ok(())
     } else {
-        app.load_previous_save_file()
+        app.load_active_save_file()
     }
 }
 

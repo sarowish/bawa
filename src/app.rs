@@ -659,7 +659,7 @@ impl App {
         if let Some(entry) = self.visible_entries.get_selected() {
             if let Entry::File { ref path, .. } = *entry.borrow() {
                 let profile = self.profiles.get_profile().unwrap();
-                if let Err(e) = profile.update_selected_save_file(path) {
+                if let Err(e) = profile.update_active_save_file(path) {
                     self.message.set_error(e.to_string());
                 }
             }
@@ -672,11 +672,11 @@ impl App {
         }
     }
 
-    pub fn load_previous_save_file(&self) -> Result<()> {
+    pub fn load_active_save_file(&self) -> Result<()> {
         match self.profiles.get_profile() {
             Some(profile) => profile
-                .get_selected_save_file()
-                .context("No previous save file exists for the selected profile.")
+                .get_active_save_file()
+                .context("No active save file exists for the selected profile.")
                 .map(|path| self.load_save_file(&path))?,
             None => Err(anyhow::anyhow!("No profile is selected.")),
         }
@@ -686,8 +686,8 @@ impl App {
         if let Some(profile) = self.profiles.get_profile() {
             std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
             profile
-                .update_selected_save_file(path)
-                .context("couldn't mark as selected file")?;
+                .update_active_save_file(path)
+                .context("couldn't mark as active save file")?;
         }
 
         Ok(())
@@ -911,9 +911,9 @@ impl HandleFileSystemEvent for App {
             child.borrow_mut().rename(new_path);
         }
 
-        if matches!(profile.get_selected_save_file(), Ok(selected_save_file) if selected_save_file == path)
+        if matches!(profile.get_active_save_file(), Ok(selected_save_file) if selected_save_file == path)
         {
-            profile.update_selected_save_file(new_path)?;
+            profile.update_active_save_file(new_path)?;
         }
 
         Ok(())
@@ -923,9 +923,9 @@ impl HandleFileSystemEvent for App {
             return Ok(());
         };
 
-        if matches!(profile.get_selected_save_file(), Ok(selected_save_file) if selected_save_file == path)
+        if matches!(profile.get_active_save_file(), Ok(selected_save_file) if selected_save_file == path)
         {
-            profile.delete_selected_save()?;
+            profile.delete_active_save()?;
         }
 
         self.marked_entries.remove(path);

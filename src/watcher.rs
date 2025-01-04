@@ -31,7 +31,7 @@ impl Watcher {
                 }
 
                 let file_name = event.paths[0].file_name().unwrap().to_string_lossy();
-                if file_name == "selected_save_file" || file_name == "selected_profile" {
+                if file_name == "active_save_file" || file_name == "active_profile" {
                     *RENAME_FROM.lock().unwrap() = None;
                     return;
                 }
@@ -62,7 +62,7 @@ impl Watcher {
                 }
 
                 let file_name = event.paths[0].file_name().unwrap().to_string_lossy();
-                if file_name == "selected_save_file" || file_name == "selected_profile" {
+                if file_name == "active_save_file" || file_name == "active_profile" {
                     return;
                 }
 

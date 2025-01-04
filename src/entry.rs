@@ -75,7 +75,7 @@ impl Entry {
                 (path.is_dir()
                     || path
                         .file_name()
-                        .is_some_and(|file_name| file_name != "selected_save_file"))
+                        .is_some_and(|file_name| file_name != "active_save_file"))
                 .then(|| Entry::new(path, depth).map(RefCell::new).map(Rc::new))
             })
             .collect()

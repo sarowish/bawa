@@ -17,20 +17,20 @@ pub fn get_profiles() -> Result<Vec<Profile>> {
         .collect())
 }
 
-pub fn get_selected_profile_file() -> Result<PathBuf> {
+pub fn get_active_profile_file() -> Result<PathBuf> {
     let data_dir = utils::get_data_dir()?;
 
-    Ok(data_dir.join("selected_profile"))
+    Ok(data_dir.join("active_profile"))
 }
 
-pub fn update_selected_profile(profile_name: &str) -> Result<()> {
-    let file_path = get_selected_profile_file()?;
+pub fn update_active_profile(profile_name: &str) -> Result<()> {
+    let file_path = get_active_profile_file()?;
     let mut file = File::create(file_path)?;
     Ok(writeln!(file, "{profile_name}")?)
 }
 
-pub fn get_selected_profile() -> Result<String> {
-    Ok(fs::read_to_string(get_selected_profile_file()?)?
+pub fn get_active_profile() -> Result<String> {
+    Ok(fs::read_to_string(get_active_profile_file()?)?
         .trim()
         .to_string())
 }
@@ -56,18 +56,18 @@ impl Profile {
         Ok(())
     }
 
-    fn get_selected_save_path(&self) -> PathBuf {
-        self.path.join("selected_save_file")
+    fn get_active_save_path(&self) -> PathBuf {
+        self.path.join("active_save_file")
     }
 
-    pub fn delete_selected_save(&self) -> Result<()> {
-        let path = self.get_selected_save_path();
+    pub fn delete_active_save(&self) -> Result<()> {
+        let path = self.get_active_save_path();
         fs::remove_file(path)?;
         Ok(())
     }
 
-    pub fn update_selected_save_file(&self, path: &Path) -> Result<()> {
-        let file_path = self.get_selected_save_path();
+    pub fn update_active_save_file(&self, path: &Path) -> Result<()> {
+        let file_path = self.get_active_save_path();
         let mut file = File::create(file_path)?;
         Ok(writeln!(
             file,
@@ -76,10 +76,10 @@ impl Profile {
         )?)
     }
 
-    pub fn get_selected_save_file(&self) -> Result<PathBuf> {
+    pub fn get_active_save_file(&self) -> Result<PathBuf> {
         Ok(self
             .path
-            .join(fs::read_to_string(self.get_selected_save_path())?.trim()))
+            .join(fs::read_to_string(self.get_active_save_path())?.trim()))
     }
 
     pub fn find_entry(&self, entry_path: &Path) -> Vec<(usize, RcEntry)> {
@@ -126,7 +126,7 @@ pub struct Profiles {
 
 impl Profiles {
     pub fn new() -> Result<Self> {
-        let selected_profile = get_selected_profile();
+        let selected_profile = get_active_profile();
         let mut profiles = get_profiles()?;
         let mut active_profile = None;
 
@@ -189,7 +189,7 @@ impl Profiles {
 
         if let Some(profile) = self.profiles.get_mut_selected() {
             profile.load_entries()?;
-            update_selected_profile(&profile.name)?;
+            update_active_profile(&profile.name)?;
             self.active_profile = self.profiles.state.selected();
             Ok(true)
         } else {
@@ -222,9 +222,9 @@ impl HandleFileSystemEvent for Profiles {
         let profile = &mut self.profiles.items[idx];
         let new_name = new_path.file_name().unwrap().to_string_lossy();
 
-        if matches!(get_selected_profile(), Ok(selected_profile) if selected_profile  == profile.name)
+        if matches!(get_active_profile(), Ok(selected_profile) if selected_profile  == profile.name)
         {
-            update_selected_profile(&new_name)?;
+            update_active_profile(&new_name)?;
         }
 
         profile.name = new_name.to_string();
