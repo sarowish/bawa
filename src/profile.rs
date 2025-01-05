@@ -64,8 +64,8 @@ impl Profile {
         self.path.join("active_save_file")
     }
 
-    pub fn get_active_save_file(&self) -> Option<&Path> {
-        self.active_save_file.as_deref()
+    pub fn get_active_save_file(&self) -> Option<PathBuf> {
+        self.active_save_file.clone()
     }
 
     pub fn delete_active_save(&self) -> Result<()> {

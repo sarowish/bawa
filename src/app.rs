@@ -99,7 +99,7 @@ impl App {
                     };
 
                     if let Err(e) = res {
-                        self.message.set_error(e.to_string());
+                        self.message.set_error(&e);
                     }
                 }
                 Event::ClearMessage => self.message.clear(),
@@ -173,7 +173,7 @@ impl App {
         };
 
         if let Err(e) = res {
-            self.message.set_error(e.to_string());
+            self.message.set_error(&e);
         }
     }
 
@@ -333,7 +333,7 @@ impl App {
 
         if fail {
             self.message
-                .set_error("Couldn't move some of the files".to_string());
+                .set_error_from_str("Couldn't move some of the files");
         }
     }
 
@@ -635,25 +635,46 @@ impl App {
         };
     }
 
+    pub fn load_save_file(&mut self, path: &Path, mark_as_active: bool) -> Result<()> {
+        std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
+
+        let profile = self.profiles.get_mut_profile().unwrap();
+
+        self.message.set_message_with_timeout(
+            &format!(
+                "Loaded {}",
+                utils::get_relative_path(&profile.path, path).unwrap()
+            ),
+            5,
+        );
+
+        if mark_as_active {
+            profile.update_active_save_file(path)?;
+        }
+
+        Ok(())
+    }
+
     pub fn load_selected_save_file(&mut self) {
         if let Some(entry) = self.visible_entries.get_selected() {
-            if let Entry::File { ref path, .. } = *entry.borrow() {
-                let profile = self.profiles.get_mut_profile().unwrap();
-
-                if let Err(e) = load_save_file(path).and(profile.update_active_save_file(path)) {
-                    self.message.set_error(e.to_string());
-                    return;
+            if !entry.borrow().is_folder() {
+                let path = entry.borrow().path();
+                if let Err(e) = self.load_save_file(&path, true) {
+                    self.message.set_error(&e);
                 }
-
-                self.message.set_message_with_timeout(
-                    format!(
-                        "Loaded {}",
-                        utils::get_relative_path(&profile.path, path).unwrap()
-                    ),
-                    5,
-                );
             }
         }
+    }
+
+    pub fn load_active_save_file(&mut self) {
+        if let Some(path) = self.profiles.get_profile().unwrap().get_active_save_file() {
+            if let Err(e) = self.load_save_file(&path, false) {
+                self.message.set_error(&e);
+            }
+        } else {
+            self.message
+                .set_warning("No active save file exists for the selected profile.");
+        };
     }
 
     pub fn mark_selected_save_file(&mut self) {
@@ -661,7 +682,7 @@ impl App {
             if let Entry::File { ref path, .. } = *entry.borrow() {
                 let profile = self.profiles.get_mut_profile().unwrap();
                 if let Err(e) = profile.update_active_save_file(path) {
-                    self.message.set_error(e.to_string());
+                    self.message.set_error(&e);
                 }
             }
         }
@@ -670,16 +691,6 @@ impl App {
     pub fn auto_mark_save_file(&mut self) {
         if OPTIONS.auto_mark_save_file {
             self.mark_selected_save_file();
-        }
-    }
-
-    pub fn load_active_save_file(&self) -> Result<()> {
-        match self.profiles.get_profile() {
-            Some(profile) => profile
-                .get_active_save_file()
-                .context("No active save file exists for the selected profile.")
-                .map(load_save_file)?,
-            None => Err(anyhow::anyhow!("No profile is selected.")),
         }
     }
 
@@ -697,7 +708,7 @@ impl App {
             utils::validate_name(&mut path);
 
             if let Err(e) = std::fs::copy(&save_file_path, &path) {
-                self.message.set_error(e.to_string());
+                self.message.set_error(&e.into());
             }
         } else {
             let Some(selected_idx) = self.visible_entries.state.selected() else {
@@ -713,7 +724,7 @@ impl App {
                 utils::validate_name(&mut path);
 
                 if let Err(e) = std::fs::copy(&save_file_path, &path) {
-                    self.message.set_error(e.to_string());
+                    self.message.set_error(&e.into());
                 }
             }
 
@@ -760,7 +771,7 @@ impl App {
 
         if self.search.matches.is_empty() {
             self.message
-                .set_error(format!("Pattern not found: {}", self.search.pattern));
+                .set_error_from_str(&format!("Pattern not found: {}", self.search.pattern));
         } else {
             self.message.clear();
         }
@@ -944,12 +955,6 @@ impl HandleFileSystemEvent for App {
 
         Ok(())
     }
-}
-
-pub fn load_save_file(path: &Path) -> Result<()> {
-    std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
-
-    Ok(())
 }
 
 #[derive(Debug)]

@@ -1,4 +1,5 @@
 use crate::event::Event;
+use anyhow::Error;
 use std::ops::Deref;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
@@ -26,28 +27,34 @@ impl Message {
         }
     }
 
-    pub fn set_info(&mut self, message: String) {
+    pub fn set_info(&mut self, message: &str) {
         self.token.cancel();
 
         if !message.is_empty() {
-            self.message = message;
+            self.message = message.to_string();
             self.kind = Kind::Info;
             self.token = CancellationToken::new();
         }
     }
 
-    pub fn set_message_with_timeout(&mut self, message: String, duration: u64) {
+    pub fn set_message_with_timeout(&mut self, message: &str, duration: u64) {
         self.set_info(message);
         self.clear_timeout(duration);
     }
 
-    pub fn set_error(&mut self, message: String) {
+    pub fn set_error(&mut self, error: &Error) {
+        self.set_info(&error.to_string());
+        self.kind = Kind::Error;
+        self.clear_timeout(10);
+    }
+
+    pub fn set_error_from_str(&mut self, message: &str) {
         self.set_info(message);
         self.kind = Kind::Error;
         self.clear_timeout(10);
     }
 
-    pub fn set_warning(&mut self, message: String) {
+    pub fn set_warning(&mut self, message: &str) {
         self.set_info(message);
         self.kind = Kind::Warning;
         self.clear_timeout(10);

@@ -107,7 +107,7 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     let entries = entries_to_spans(
         &visible_entries.items,
         &app.marked_entries,
-        profile.get_active_save_file(),
+        profile.get_active_save_file().as_deref(),
     )
     .into_iter()
     .map(Line::from)

@@ -273,6 +273,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::UpDirectory => app.up_directory(),
             Command::JumpToParent => app.jump_to_parent(),
             Command::LoadSaveFile => app.load_selected_save_file(),
+            Command::LoadActiveSaveFile => app.load_active_save_file(),
             Command::MarkSaveFile => app.mark_selected_save_file(),
             Command::ImportSaveFile => app.import_save_file(false),
             Command::ImportSaveFileTopLevel => app.import_save_file(true),
@@ -414,7 +415,7 @@ fn complete(app: &mut App) {
     };
 
     if let Err(e) = res {
-        app.message.set_error(e.to_string());
+        app.message.set_error(&e);
     }
 }
 
@@ -425,7 +426,7 @@ fn abort(app: &mut App) {
                 app.mode.select_previous();
             } else {
                 app.message
-                    .set_warning("Can't abort while no profile is selected".to_string());
+                    .set_warning("Can't abort while no profile is selected");
             }
         }
         Mode::EntryRenaming

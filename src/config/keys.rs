@@ -103,6 +103,7 @@ impl Default for KeyBindings {
         insert_binding!(general, "K", Command::UpDirectory);
         insert_binding!(general, "shift-up", Command::UpDirectory);
         insert_binding!(general, "f", Command::LoadSaveFile);
+        insert_binding!(general, "ctrl-f", Command::LoadActiveSaveFile);
         insert_binding!(general, "F", Command::MarkSaveFile);
         insert_binding!(general, "i", Command::ImportSaveFile);
         insert_binding!(general, "I", Command::ImportSaveFileTopLevel);
