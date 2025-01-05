@@ -99,10 +99,19 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
 fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     let visible_entries = &mut app.visible_entries;
-    let entries = entries_to_spans(&visible_entries.items, &app.marked_entries)
-        .into_iter()
-        .map(Line::from)
-        .map(ListItem::new);
+
+    let Some(profile) = app.profiles.get_profile() else {
+        return;
+    };
+
+    let entries = entries_to_spans(
+        &visible_entries.items,
+        &app.marked_entries,
+        profile.get_active_save_file(),
+    )
+    .into_iter()
+    .map(Line::from)
+    .map(ListItem::new);
 
     let entries = {
         List::new(entries)

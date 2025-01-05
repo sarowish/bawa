@@ -129,6 +129,7 @@ pub struct UserTheme {
     title: Option<UserStyle>,
     selected: Option<UserStyle>,
     marked: Option<UserStyle>,
+    active: Option<UserStyle>,
     fuzzy_selected: Option<UserStyle>,
     highlight: Option<UserStyle>,
     confirmation_border: Option<UserStyle>,
@@ -141,6 +142,7 @@ pub struct Theme {
     pub title: Style,
     pub selected: Style,
     pub marked: Style,
+    pub active: Style,
     pub fuzzy_selected: Style,
     pub highlight: Style,
     pub confirmation_border: Style,
@@ -161,6 +163,9 @@ impl Default for Theme {
             marked: Style::default()
                 .fg(Color::DarkGray)
                 .add_modifier(Modifier::CROSSED_OUT),
+            active: Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
             fuzzy_selected: Style::default().fg(Color::Magenta),
             highlight: Style::default().fg(Color::Yellow),
             confirmation_border: Style::default().fg(Color::Blue),
@@ -190,6 +195,7 @@ impl TryFrom<UserTheme> for Theme {
         set_theme_field!(title);
         set_theme_field!(selected);
         set_theme_field!(marked);
+        set_theme_field!(active);
         set_theme_field!(fuzzy_selected);
         set_theme_field!(highlight);
         set_theme_field!(confirmation_border);

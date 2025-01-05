@@ -638,7 +638,9 @@ impl App {
     pub fn load_selected_save_file(&mut self) {
         if let Some(entry) = self.visible_entries.get_selected() {
             if let Entry::File { ref path, .. } = *entry.borrow() {
-                if let Err(e) = self.load_save_file(path) {
+                let profile = self.profiles.get_mut_profile().unwrap();
+
+                if let Err(e) = load_save_file(path).and(profile.update_active_save_file(path)) {
                     self.message.set_error(e.to_string());
                     return;
                 }
@@ -646,8 +648,7 @@ impl App {
                 self.message.set_message_with_timeout(
                     format!(
                         "Loaded {}",
-                        utils::get_relative_path(&self.profiles.get_profile().unwrap().path, path)
-                            .unwrap()
+                        utils::get_relative_path(&profile.path, path).unwrap()
                     ),
                     5,
                 );
@@ -658,7 +659,7 @@ impl App {
     pub fn mark_selected_save_file(&mut self) {
         if let Some(entry) = self.visible_entries.get_selected() {
             if let Entry::File { ref path, .. } = *entry.borrow() {
-                let profile = self.profiles.get_profile().unwrap();
+                let profile = self.profiles.get_mut_profile().unwrap();
                 if let Err(e) = profile.update_active_save_file(path) {
                     self.message.set_error(e.to_string());
                 }
@@ -677,20 +678,9 @@ impl App {
             Some(profile) => profile
                 .get_active_save_file()
                 .context("No active save file exists for the selected profile.")
-                .map(|path| self.load_save_file(&path))?,
+                .map(load_save_file)?,
             None => Err(anyhow::anyhow!("No profile is selected.")),
         }
-    }
-
-    pub fn load_save_file(&self, path: &Path) -> Result<()> {
-        if let Some(profile) = self.profiles.get_profile() {
-            std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
-            profile
-                .update_active_save_file(path)
-                .context("couldn't mark as active save file")?;
-        }
-
-        Ok(())
     }
 
     pub fn import_save_file(&mut self, top_level: bool) {
@@ -911,7 +901,7 @@ impl HandleFileSystemEvent for App {
             child.borrow_mut().rename(new_path);
         }
 
-        if matches!(profile.get_active_save_file(), Ok(selected_save_file) if selected_save_file == path)
+        if matches!(profile.get_active_save_file(), Some(selected_save_file) if selected_save_file == path)
         {
             profile.update_active_save_file(new_path)?;
         }
@@ -923,7 +913,7 @@ impl HandleFileSystemEvent for App {
             return Ok(());
         };
 
-        if matches!(profile.get_active_save_file(), Ok(selected_save_file) if selected_save_file == path)
+        if matches!(profile.get_active_save_file(), Some(selected_save_file) if selected_save_file == path)
         {
             profile.delete_active_save()?;
         }
@@ -954,6 +944,12 @@ impl HandleFileSystemEvent for App {
 
         Ok(())
     }
+}
+
+pub fn load_save_file(path: &Path) -> Result<()> {
+    std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
+
+    Ok(())
 }
 
 #[derive(Debug)]

@@ -2,7 +2,7 @@ use crate::app::StatefulList;
 use crate::entry::{find_entry, Entry, RcEntry};
 use crate::utils;
 use crate::watcher::HandleFileSystemEvent;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::Write;
@@ -40,6 +40,7 @@ pub struct Profile {
     pub name: String,
     pub path: PathBuf,
     pub entries: Vec<RcEntry>,
+    pub active_save_file: Option<PathBuf>,
 }
 
 impl Profile {
@@ -48,11 +49,14 @@ impl Profile {
             entries: Vec::new(),
             name: path.file_name().unwrap().to_string_lossy().to_string(),
             path,
+            active_save_file: None,
         }
     }
 
     pub fn load_entries(&mut self) -> Result<()> {
         self.entries = Entry::entries_from_path(&self.path, 0)?;
+        self.read_active_save_file();
+
         Ok(())
     }
 
@@ -60,13 +64,28 @@ impl Profile {
         self.path.join("active_save_file")
     }
 
+    pub fn get_active_save_file(&self) -> Option<&Path> {
+        self.active_save_file.as_deref()
+    }
+
     pub fn delete_active_save(&self) -> Result<()> {
         let path = self.get_active_save_path();
-        fs::remove_file(path)?;
+        Ok(fs::remove_file(path)?)
+    }
+
+    pub fn update_active_save_file(&mut self, path: &Path) -> Result<()> {
+        if matches!(&self.active_save_file, Some(active_path) if active_path == path) {
+            return Ok(());
+        }
+
+        self.write_active_save_file(path)
+            .context("Couldn't mark as active save file")?;
+        self.active_save_file = Some(path.to_path_buf());
+
         Ok(())
     }
 
-    pub fn update_active_save_file(&self, path: &Path) -> Result<()> {
+    fn write_active_save_file(&self, path: &Path) -> Result<()> {
         let file_path = self.get_active_save_path();
         let mut file = File::create(file_path)?;
         Ok(writeln!(
@@ -76,10 +95,12 @@ impl Profile {
         )?)
     }
 
-    pub fn get_active_save_file(&self) -> Result<PathBuf> {
-        Ok(self
-            .path
-            .join(fs::read_to_string(self.get_active_save_path())?.trim()))
+    pub fn read_active_save_file(&mut self) {
+        if let Ok(path) =
+            fs::read_to_string(self.get_active_save_path()).map(|path| self.path.join(path.trim()))
+        {
+            self.active_save_file = Some(path);
+        }
     }
 
     pub fn find_entry(&self, entry_path: &Path) -> Vec<(usize, RcEntry)> {

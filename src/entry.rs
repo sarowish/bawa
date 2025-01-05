@@ -222,8 +222,8 @@ impl Entry {
         }
     }
 
-    pub fn to_spans<'b>(&self, last_item: bool, selected: bool) -> Vec<Span<'b>> {
-        vec![
+    pub fn to_spans<'b>(&self, last_item: bool, selected: bool, active: bool) -> Vec<Span<'b>> {
+        let mut spans = vec![
             Span::styled(
                 if last_item {
                     let mut lines = "  │ ".repeat(self.depth() - 1);
@@ -250,26 +250,35 @@ impl Entry {
                     Style::default()
                 },
             ),
-        ]
+        ];
+
+        if active {
+            spans.push(Span::styled(" (*)", THEME.active));
+        }
+
+        spans
     }
 }
 
 pub fn entries_to_spans<'a>(
     entries: &'a [RcEntry],
     marked_entries: &HashMap<PathBuf, RcEntry>,
+    active_save_file: Option<&Path>,
 ) -> Vec<Vec<Span<'a>>> {
     let mut items: Vec<_> = entries
         .windows(2)
         .map(|pair| {
             let entry = pair[0].borrow();
             let selected = marked_entries.contains_key(&entry.path());
-            entry.to_spans(entry.depth() > pair[1].borrow().depth(), selected)
+            let active = active_save_file.is_some_and(|active_path| active_path == entry.path());
+            entry.to_spans(entry.depth() > pair[1].borrow().depth(), selected, active)
         })
         .collect();
 
     if let Some(last_entry) = entries.last().map(|entry| entry.borrow()) {
         let selected = marked_entries.contains_key(&last_entry.path());
-        items.push(last_entry.to_spans(last_entry.depth() != 0, selected));
+        let active = active_save_file.is_some_and(|active_path| active_path == last_entry.path());
+        items.push(last_entry.to_spans(last_entry.depth() != 0, selected, active));
     }
 
     items

@@ -1,4 +1,9 @@
-use crate::{app::App, entry::entries_to_spans, profile::Profiles, utils, CLAP_ARGS};
+use crate::{
+    app::{load_save_file, App},
+    entry::entries_to_spans,
+    profile::Profiles,
+    utils, CLAP_ARGS,
+};
 use anyhow::{Context, Result};
 use clap::ArgMatches;
 use crossterm::style::Stylize;
@@ -22,15 +27,24 @@ pub fn handle_subcommands(app: &mut App) -> bool {
 }
 
 pub fn handle_list_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()> {
-    app.profiles
-        .active_profile
-        .context("No Profile is selected.")?;
-
     app.open_all_folds();
 
-    for spans in entries_to_spans(&app.visible_entries.items, &Default::default()) {
+    let Some(profile) = app.profiles.get_profile() else {
+        return Err(anyhow::anyhow!("No Profile is selected"));
+    };
+
+    for spans in entries_to_spans(
+        &app.visible_entries.items,
+        &Default::default(),
+        profile.get_active_save_file(),
+    ) {
         print!("{}", spans[0].content.dark_grey());
-        println!("{}{}", spans[1], spans[2]);
+        print!("{}{}", spans[1], spans[2]);
+        if let Some(span) = spans.get(3) {
+            println!("{}", span.content.yellow());
+        } else {
+            println!();
+        }
     }
 
     Ok(())
@@ -40,9 +54,12 @@ pub fn handle_load_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     if let Some(relative_path) = args.get_one::<String>("relative_path") {
         let profile = app
             .profiles
-            .get_profile()
+            .get_mut_profile()
             .context("No profile is selected.")?;
-        app.load_save_file(&profile.path.join(relative_path))?;
+        let path = &profile.path.join(relative_path);
+        load_save_file(path)?;
+        profile.update_active_save_file(path)?;
+
         Ok(())
     } else {
         app.load_active_save_file()
