@@ -1,5 +1,5 @@
 [package]
-name = "save_organizer"
+name = "bawa"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,10 +19,6 @@ tokio-util = "0.7.12"
 toml = "0.8.19"
 unicode-segmentation = "1.12.0"
 unicode-width = "0.2.0"
-
-[[bin]]
-name = "bawa"
-path = "src/main.rs"
 
 [profile.release]
 lto = true
