@@ -373,9 +373,15 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
         KeyCode::Esc => abort(app),
         _ => {
             if let Some(input) = &mut app.fuzzy_finder.input {
-                match key.code {
-                    KeyCode::Down => app.fuzzy_finder.matched_items.next(),
-                    KeyCode::Up => app.fuzzy_finder.matched_items.previous(),
+                match (key.code, key.modifiers) {
+                    (KeyCode::Down | KeyCode::Tab, _)
+                    | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+                        app.fuzzy_finder.matched_items.next()
+                    }
+                    (KeyCode::Up | KeyCode::BackTab, _)
+                    | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
+                        app.fuzzy_finder.matched_items.previous()
+                    }
                     _ => {
                         input.update(key);
 
