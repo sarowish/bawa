@@ -107,8 +107,7 @@ pub fn get_relative_path_with_components(parent: &Path, child: &Path) -> Result<
 
 pub fn get_relative_path(parent: &Path, child: &Path) -> Result<String> {
     let components = get_relative_path_with_components(parent, child)?;
-    let mut path = PathBuf::new();
-    path.extend(components);
+    let path = PathBuf::from_iter(components);
     Ok(path.to_string_lossy().to_string())
 }
 
