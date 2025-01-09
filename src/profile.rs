@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 
 pub fn get_profiles() -> Result<Vec<Profile>> {
     Ok(utils::get_data_dir()?
@@ -124,12 +124,24 @@ impl Profile {
         entries
     }
 
-    pub fn get_file_rel_paths(&self) -> Vec<String> {
-        self.get_entries(true)
-            .iter()
-            .filter(|entry| entry.borrow().is_file())
-            .map(|entry| utils::get_relative_path(&self.path, &entry.borrow().path()).unwrap())
-            .collect()
+    pub fn get_file_rel_paths(&self, include_folders: bool) -> Vec<String> {
+        let mut paths = Vec::new();
+
+        for entry in self.get_entries(true) {
+            let entry = entry.borrow();
+            let is_file = entry.is_file();
+            if include_folders || is_file {
+                let mut path = utils::get_relative_path(&self.path, &entry.path()).unwrap();
+
+                if !is_file {
+                    path.push(MAIN_SEPARATOR);
+                }
+
+                paths.push(path);
+            }
+        }
+
+        paths
     }
 }
 

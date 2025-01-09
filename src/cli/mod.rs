@@ -1,11 +1,12 @@
-use clap::{Arg, ArgAction, ArgMatches, Command};
-
+use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint};
 pub use handlers::handle_subcommands;
+use std::env;
 
 mod commands;
+mod completion;
 mod handlers;
 
-pub fn get_matches() -> ArgMatches {
+pub fn build_command() -> Command {
     Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
@@ -14,6 +15,7 @@ pub fn get_matches() -> ArgMatches {
                 .short('c')
                 .long("config")
                 .help("Path to configuration file")
+                .value_hint(ValueHint::FilePath)
                 .value_name("FILE"),
         )
         .arg(
@@ -28,6 +30,7 @@ pub fn get_matches() -> ArgMatches {
                 .short('s')
                 .long("save-file")
                 .help("Path to save file")
+                .value_hint(ValueHint::FilePath)
                 .value_name("FILE"),
         )
         .subcommand(commands::create_list_subcommand())
@@ -36,5 +39,8 @@ pub fn get_matches() -> ArgMatches {
         .subcommand(commands::create_rename_subcommand())
         .subcommand(commands::create_delete_subcommand())
         .subcommand(commands::create_profile_subcommand())
-        .get_matches()
+}
+
+pub fn get_matches() -> ArgMatches {
+    build_command().get_matches()
 }

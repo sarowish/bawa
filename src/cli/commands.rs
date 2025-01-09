@@ -1,4 +1,6 @@
+use super::completion;
 use clap::{value_parser, Arg, ArgAction, Command};
+use clap_complete::ArgValueCompleter;
 
 pub fn create_list_subcommand() -> Command {
     Command::new("list").about("list save states")
@@ -8,7 +10,8 @@ pub fn create_load_subcommand() -> Command {
     Command::new("load").about("load save file").arg(
         Arg::new("relative_path")
             .help("relative path to save file from profile")
-            .value_name("RELATIVE_PATH"),
+            .value_name("RELATIVE_PATH")
+            .add(ArgValueCompleter::new(completion::entry_completer)),
     )
 }
 
@@ -24,7 +27,8 @@ pub fn create_rename_subcommand() -> Command {
             Arg::new("relative_path")
                 .help("relative path to save file from profile")
                 .required(true)
-                .value_name("RELATIVE_PATH"),
+                .value_name("RELATIVE_PATH")
+                .add(ArgValueCompleter::new(completion::entry_completer)),
         )
 }
 
@@ -33,7 +37,8 @@ pub fn create_delete_subcommand() -> Command {
         Arg::new("relative_path")
             .help("relative path to save file from profile")
             .required(true)
-            .value_name("RELATIVE_PATH"),
+            .value_name("RELATIVE_PATH")
+            .add(ArgValueCompleter::new(completion::entry_completer)),
     )
 }
 
@@ -56,14 +61,22 @@ pub fn create_profile_subcommand() -> Command {
         .subcommand(
             Command::new("delete")
                 .about("delete profile")
-                .arg(Arg::new("profile_name").value_name("NAME"))
+                .arg(
+                    Arg::new("profile_name")
+                        .value_name("NAME")
+                        .add(ArgValueCompleter::new(completion::profile_completer)),
+                )
                 .arg(by_index.clone().help("select profile by index")),
         )
         .subcommand(
             Command::new("rename")
                 .about("rename profile")
                 .arg(Arg::new("new_name").required(true).value_name("NEW_NAME"))
-                .arg(Arg::new("profile_name").value_name("NAME"))
+                .arg(
+                    Arg::new("profile_name")
+                        .value_name("NAME")
+                        .add(ArgValueCompleter::new(completion::profile_completer)),
+                )
                 .arg(by_index.clone().help("select profile by index")),
         )
         .subcommand(
@@ -82,7 +95,8 @@ pub fn create_profile_subcommand() -> Command {
                 .arg(
                     Arg::new("profile_name")
                         .required_unless_present("by_index")
-                        .value_name("NAME"),
+                        .value_name("NAME")
+                        .add(ArgValueCompleter::new(completion::profile_completer)),
                 )
                 .arg(by_index.help("set profile by index")),
         )

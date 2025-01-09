@@ -1,4 +1,5 @@
 use clap::ArgMatches;
+use clap_complete::CompleteEnv;
 use cli::handle_subcommands;
 use config::{keys::KeyBindings, options::Options, theme::Theme, Config};
 use std::sync::LazyLock;
@@ -32,6 +33,8 @@ static THEME: LazyLock<&'static Theme> = LazyLock::new(|| &CONFIG.theme);
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    CompleteEnv::with_factory(cli::build_command).complete();
+
     if !OPTIONS.save_file_path.exists() {
         return Ok(());
     }

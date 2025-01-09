@@ -811,10 +811,12 @@ impl App {
     }
 
     pub fn open_fuzzy_finder(&mut self) {
-        self.fuzzy_finder.input = Some(Input::new(&Mode::Normal));
-        self.fuzzy_finder
-            .fill_paths(&self.profiles.get_profile().unwrap().get_file_rel_paths());
-        self.fuzzy_finder.update_matches();
+        if let Some(profile) = self.profiles.get_profile() {
+            self.fuzzy_finder.input = Some(Input::new(&Mode::Normal));
+            self.fuzzy_finder
+                .fill_paths(&profile.get_file_rel_paths(false));
+            self.fuzzy_finder.update_matches();
+        }
     }
 
     pub fn jump_to_entry(&mut self) {

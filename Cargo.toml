@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.92"
 clap = "4.5.20"
+clap_complete = { version = "4.5.40", features = ["unstable-dynamic"] }
 crossterm = { version = "0.28.1", features = ["event-stream"] }
 dirs = "5.0.1"
 futures = "0.3.31"

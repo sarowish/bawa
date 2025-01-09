@@ -138,6 +138,14 @@ impl FuzzyFinder {
         self.matched_items.select_first();
     }
 
+    pub fn non_interactive<'a>(paths: &'a [String], pattern: &str) -> Vec<&'a String> {
+        let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
+        let pattern = Pattern::parse(pattern, CaseMatching::Ignore, Normalization::Smart);
+        let matched_paths = pattern.match_list(paths, &mut matcher);
+
+        matched_paths.into_iter().map(|(path, _)| path).collect()
+    }
+
     pub fn is_active(&self) -> bool {
         self.input.is_some()
     }
@@ -145,6 +153,7 @@ impl FuzzyFinder {
 
 #[cfg(test)]
 mod tests {
+    use super::FuzzyFinder;
     use crate::search::MatchedItem;
 
     #[test]
@@ -172,5 +181,18 @@ mod tests {
             item.highlight_slices(),
             vec![("some t", false), ("ext", true)]
         );
+    }
+
+    #[test]
+    fn oneshot() {
+        let strings = &[
+            String::from("Altus Plateau/Godskin Apostle.sl2"),
+            String::from("Mt. Gelmir/Godskin Noble.sl2"),
+            String::from("Altus Plateau/Leyndell/Goldfrey.sl2"),
+        ];
+
+        let matches = FuzzyFinder::non_interactive(strings, "godnob");
+
+        assert_eq!(matches.len(), 1);
     }
 }

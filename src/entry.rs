@@ -7,6 +7,7 @@ use ratatui::{
 use std::{
     cell::RefCell,
     collections::HashMap,
+    env,
     path::{Path, PathBuf},
     rc::Rc,
 };
@@ -285,7 +286,7 @@ pub fn entries_to_spans<'a>(
 }
 
 fn set_name_helper(path: &Path) -> String {
-    let name = if OPTIONS.hide_extensions && path.is_file() {
+    let name = if env::var("COMPLETE").is_ok() && OPTIONS.hide_extensions && path.is_file() {
         path.file_stem()
     } else {
         path.file_name()
