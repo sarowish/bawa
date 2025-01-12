@@ -33,11 +33,7 @@ pub fn build_command() -> Command {
                 .value_hint(ValueHint::FilePath)
                 .value_name("FILE"),
         )
-        .subcommand(commands::create_list_subcommand())
-        .subcommand(commands::create_load_subcommand())
-        .subcommand(commands::create_import_subcommand())
-        .subcommand(commands::create_rename_subcommand())
-        .subcommand(commands::create_delete_subcommand())
+        .subcommands(commands::create_entry_subcommands())
         .subcommand(commands::create_profile_subcommand())
 }
 

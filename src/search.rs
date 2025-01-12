@@ -1,8 +1,18 @@
-use crate::{app::StatefulList, input::Input, utils};
+use crate::{
+    app::StatefulList,
+    input::{handle_key_fuzzy_mode, Input},
+    ui, utils,
+};
+use anyhow::Result;
+use crossterm::{
+    event::{Event, KeyCode},
+    terminal::disable_raw_mode,
+};
 use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
     Config, Matcher, Utf32String,
 };
+use ratatui::{TerminalOptions, Viewport};
 use std::fmt::Display;
 
 #[derive(Default)]
@@ -83,7 +93,7 @@ impl MatchedItem {
 
 pub struct FuzzyFinder {
     matcher: Matcher,
-    pub input: Option<Input>,
+    pub input: Input,
     pattern: Pattern,
     paths: Vec<Utf32String>,
     pub matched_items: StatefulList<MatchedItem>,
@@ -93,7 +103,7 @@ impl FuzzyFinder {
     pub fn new() -> Self {
         Self {
             matcher: Matcher::new(Config::DEFAULT.match_paths()),
-            input: None,
+            input: Input::new(),
             pattern: Pattern::default(),
             paths: Vec::new(),
             matched_items: StatefulList::with_items(Vec::new()),
@@ -107,12 +117,14 @@ impl FuzzyFinder {
             .collect();
     }
 
+    pub fn reset(&mut self) {
+        self.input.set_text("");
+        self.paths.drain(..);
+    }
+
     pub fn update_matches(&mut self) {
-        self.pattern.reparse(
-            &self.input.as_ref().unwrap().text,
-            CaseMatching::Smart,
-            Normalization::Smart,
-        );
+        self.pattern
+            .reparse(&self.input.text, CaseMatching::Smart, Normalization::Smart);
 
         self.matched_items.items.clear();
 
@@ -146,8 +158,43 @@ impl FuzzyFinder {
         matched_paths.into_iter().map(|(path, _)| path).collect()
     }
 
+    pub fn run_inline(&mut self, paths: &[String]) -> Result<Option<&str>> {
+        self.fill_paths(paths);
+        self.update_matches();
+
+        if self.matched_items.items.len() > 1 {
+            let terminal_options = TerminalOptions {
+                viewport: Viewport::Inline(25),
+            };
+            let mut terminal = ratatui::init_with_options(terminal_options);
+
+            loop {
+                terminal.draw(|f| ui::draw_fuzzy_finder(f, self, f.area()))?;
+
+                if let Event::Key(key) = crossterm::event::read()? {
+                    match key.code {
+                        KeyCode::Enter => {
+                            break;
+                        }
+                        KeyCode::Esc => {
+                            self.matched_items.state.select(None);
+                            break;
+                        }
+                        _ => handle_key_fuzzy_mode(key, self),
+                    }
+                }
+            }
+
+            terminal.clear()?;
+            disable_raw_mode()?;
+        }
+
+        let selected_item = self.matched_items.get_selected();
+        Ok(selected_item.map(|item| item.text.as_str()))
+    }
+
     pub fn is_active(&self) -> bool {
-        self.input.is_some()
+        !self.paths.is_empty()
     }
 }
 

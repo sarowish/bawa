@@ -2,44 +2,38 @@ use super::completion;
 use clap::{value_parser, Arg, ArgAction, Command};
 use clap_complete::ArgValueCompleter;
 
-pub fn create_list_subcommand() -> Command {
-    Command::new("list").about("list save states")
-}
+pub fn create_entry_subcommands() -> Vec<Command> {
+    let fuzzy = Arg::new("fuzzy")
+        .help("launch fuzzy finder to pick file")
+        .short('f')
+        .long("fuzzy")
+        .action(ArgAction::SetTrue);
 
-pub fn create_load_subcommand() -> Command {
-    Command::new("load").about("load save file").arg(
-        Arg::new("relative_path")
-            .help("relative path to save file from profile")
-            .value_name("RELATIVE_PATH")
-            .add(ArgValueCompleter::new(completion::entry_completer)),
-    )
-}
+    let mut relative_path = Arg::new("relative_path")
+        .help("relative path to save file from profile")
+        .value_name("RELATIVE_PATH")
+        .add(ArgValueCompleter::new(completion::entry_completer));
 
-pub fn create_import_subcommand() -> Command {
-    Command::new("import").about("import save file")
-}
-
-pub fn create_rename_subcommand() -> Command {
-    Command::new("rename")
-        .about("rename save state")
-        .arg(Arg::new("new_name").required(true).value_name("NEW_NAME"))
-        .arg(
-            Arg::new("relative_path")
-                .help("relative path to save file from profile")
-                .required(true)
-                .value_name("RELATIVE_PATH")
-                .add(ArgValueCompleter::new(completion::entry_completer)),
-        )
-}
-
-pub fn create_delete_subcommand() -> Command {
-    Command::new("delete").about("delete save file").arg(
-        Arg::new("relative_path")
-            .help("relative path to save file from profile")
-            .required(true)
-            .value_name("RELATIVE_PATH")
-            .add(ArgValueCompleter::new(completion::entry_completer)),
-    )
+    vec![
+        Command::new("list").about("list save states"),
+        Command::new("load")
+            .about("load save file")
+            .arg(&relative_path)
+            .arg(&fuzzy),
+        Command::new("import").about("import save file"),
+        Command::new("rename")
+            .about("rename save state")
+            .arg(Arg::new("new_name").required(true).value_name("NEW_NAME"))
+            .arg({
+                relative_path = relative_path.required_unless_present("fuzzy");
+                &relative_path
+            })
+            .arg(&fuzzy),
+        Command::new("delete")
+            .about("delete save file")
+            .arg(relative_path)
+            .arg(fuzzy),
+    ]
 }
 
 pub fn create_profile_subcommand() -> Command {

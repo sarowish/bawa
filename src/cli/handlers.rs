@@ -1,7 +1,8 @@
 use crate::{app::App, entry::entries_to_spans, profile::Profiles, utils, CLAP_ARGS};
 use anyhow::{Context, Result};
-use clap::ArgMatches;
+use clap::{parser::ValueSource, ArgMatches};
 use crossterm::style::Stylize;
+use std::path::PathBuf;
 
 pub fn handle_subcommands(app: &mut App) -> bool {
     let res = match CLAP_ARGS.subcommand() {
@@ -46,16 +47,12 @@ pub fn handle_list_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()> {
 }
 
 pub fn handle_load_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
-    let profile = app
-        .profiles
-        .get_profile()
-        .context("No profile is selected.")?;
-
-    if let Some(relative_path) = args.get_one::<String>("relative_path") {
-        let path = &profile.path.join(relative_path);
-        app.load_save_file(path, true)?;
-    } else {
+    if let Some(path) = get_entry_path(args, app)? {
+        app.load_save_file(&path, true)?;
+    } else if !any_args(args) {
         app.load_active_save_file();
+    } else {
+        std::process::exit(1)
     }
 
     if !app.message.is_empty() {
@@ -74,33 +71,28 @@ pub fn handle_import_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()>
 }
 
 fn handle_rename_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
-    let new_name = args.get_one::<String>("new_name").unwrap();
-    let relative_path = args.get_one::<String>("relative_path").unwrap();
-    let profile_path = &app
-        .profiles
-        .get_profile()
-        .context("No profile is selected.")?
-        .path;
+    if let Some(entry_path) = get_entry_path(args, app)? {
+        let new_name = args.get_one::<String>("new_name").unwrap();
+        let mut new_path = entry_path.clone();
+        new_path.set_file_name(new_name);
 
-    let entry_path = profile_path.join(relative_path);
-    let mut new_path = entry_path.clone();
-    new_path.set_file_name(new_name);
-
-    utils::rename(&entry_path, &new_path)?;
+        utils::rename(&entry_path, &new_path)?;
+    } else {
+        std::process::exit(1)
+    }
 
     Ok(())
 }
 
 fn handle_delete_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
-    let relative_path = args.get_one::<String>("relative_path").unwrap();
-    let profile = app
-        .profiles
-        .get_profile()
-        .context("No profile is selected.")?;
-
-    let path_to_entry = profile.find_entry(&profile.path.join(relative_path));
-    let entry = &path_to_entry.last().context("There is no such entry.")?.1;
-    entry.borrow().delete()?;
+    if let Some(path) = get_entry_path(args, app)? {
+        let profile = app.profiles.get_profile().unwrap();
+        let path_to_entry = profile.find_entry(&path);
+        let entry = &path_to_entry.last().context("There is no such entry.")?.1;
+        entry.borrow().delete()?;
+    } else {
+        std::process::exit(1)
+    }
 
     Ok(())
 }
@@ -147,6 +139,29 @@ pub fn handle_profile_subcommand(profiles: &mut Profiles, args: &ArgMatches) -> 
     }
 
     Ok(())
+}
+
+fn any_args(args: &ArgMatches) -> bool {
+    args.ids()
+        .filter_map(|id| args.value_source(id.as_str()))
+        .any(|value| value == ValueSource::CommandLine)
+}
+
+fn get_entry_path(args: &ArgMatches, app: &mut App) -> Result<Option<PathBuf>> {
+    let profile = app
+        .profiles
+        .get_profile()
+        .context("No profile is selected.")?;
+
+    let mut relative_path = args.get_one::<String>("relative_path").map(String::as_str);
+
+    if args.get_flag("fuzzy") {
+        app.fuzzy_finder.input.set_text(relative_path.unwrap_or(""));
+        let paths = profile.get_file_rel_paths(false);
+        relative_path = app.fuzzy_finder.run_inline(&paths)?;
+    }
+
+    Ok(relative_path.map(|rel_path| profile.path.join(rel_path)))
 }
 
 fn select_profile_by_idx_or_name(profiles: &mut Profiles, args: &ArgMatches) -> Result<()> {

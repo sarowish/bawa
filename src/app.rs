@@ -204,7 +204,7 @@ impl App {
     }
 
     pub fn take_input(&mut self, mode: Mode) {
-        self.footer_input = Some(Input::new(&mode));
+        self.footer_input = Some(Input::with_prompt(&mode));
         self.mode = mode;
         self.message.clear();
     }
@@ -812,7 +812,6 @@ impl App {
 
     pub fn open_fuzzy_finder(&mut self) {
         if let Some(profile) = self.profiles.get_profile() {
-            self.fuzzy_finder.input = Some(Input::new(&Mode::Normal));
             self.fuzzy_finder
                 .fill_paths(&profile.get_file_rel_paths(false));
             self.fuzzy_finder.update_matches();

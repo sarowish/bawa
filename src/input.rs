@@ -5,6 +5,7 @@ use crate::{
     commands::{Command, HelpCommand, ProfileSelectionCommand},
     help::Help,
     profile::Profiles,
+    search::FuzzyFinder,
     KEY_BINDINGS,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -72,7 +73,18 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn new(mode: &Mode) -> Self {
+    pub fn new() -> Self {
+        Self {
+            text: String::new(),
+            prompt: String::new(),
+            idx: 0,
+            cursor_position: 0,
+            cursor_offset: 0,
+            change: None,
+        }
+    }
+
+    pub fn with_prompt(mode: &Mode) -> Self {
         let prompt = match mode {
             Mode::Search(_) => "/",
             Mode::ProfileCreation => "Profile Name: ",
@@ -367,29 +379,33 @@ fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App, context: Confirmat
     }
 }
 
+pub fn handle_key_fuzzy_mode(key: KeyEvent, fuzzy_finder: &mut FuzzyFinder) {
+    let input = &mut fuzzy_finder.input;
+
+    match (key.code, key.modifiers) {
+        (KeyCode::Down | KeyCode::Tab, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
+            fuzzy_finder.matched_items.next();
+        }
+        (KeyCode::Up | KeyCode::BackTab, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
+            fuzzy_finder.matched_items.previous();
+        }
+        _ => {
+            input.update(key);
+
+            if input.change.is_some() {
+                fuzzy_finder.update_matches();
+            }
+        }
+    }
+}
+
 fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
     match key.code {
         KeyCode::Enter => complete(app),
         KeyCode::Esc => abort(app),
         _ => {
-            if let Some(input) = &mut app.fuzzy_finder.input {
-                match (key.code, key.modifiers) {
-                    (KeyCode::Down | KeyCode::Tab, _)
-                    | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-                        app.fuzzy_finder.matched_items.next()
-                    }
-                    (KeyCode::Up | KeyCode::BackTab, _)
-                    | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
-                        app.fuzzy_finder.matched_items.previous()
-                    }
-                    _ => {
-                        input.update(key);
-
-                        if input.change.is_some() {
-                            app.fuzzy_finder.update_matches();
-                        }
-                    }
-                }
+            if app.fuzzy_finder.is_active() {
+                handle_key_fuzzy_mode(key, &mut app.fuzzy_finder);
             } else if let Some(input) = &mut app.footer_input {
                 input.update(key);
             };
@@ -414,7 +430,7 @@ fn complete(app: &mut App) {
             if app.fuzzy_finder.is_active() && !app.fuzzy_finder.matched_items.items.is_empty() =>
         {
             app.jump_to_entry();
-            app.fuzzy_finder.input = None;
+            app.fuzzy_finder.reset();
             Ok(())
         }
         _ => Ok(()),
@@ -443,7 +459,7 @@ fn abort(app: &mut App) {
             app.abort_input();
         }
         Mode::Normal if app.fuzzy_finder.is_active() => {
-            app.fuzzy_finder.input = None;
+            app.fuzzy_finder.reset();
         }
         _ => (),
     }

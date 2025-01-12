@@ -76,7 +76,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         );
     }
 
-    if app.fuzzy_finder.input.is_some() {
+    if app.fuzzy_finder.is_active() {
         draw_fuzzy_finder(
             f,
             &mut app.fuzzy_finder,
@@ -133,7 +133,7 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(entries, area, &mut visible_entries.state);
 }
 
-fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {
+pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {
     f.render_widget(Clear, area);
 
     let (search_bar_area, results_area) = {
@@ -141,7 +141,7 @@ fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) 
         (chunks[0], chunks[1])
     };
 
-    let input = fuzzy_finder.input.as_ref().unwrap();
+    let input = &fuzzy_finder.input;
     let search = Paragraph::new(input.text.clone()).block(
         Block::default()
             .title(Span::styled("Search", THEME.title))
