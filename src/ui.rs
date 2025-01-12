@@ -1,11 +1,12 @@
 use crate::{
     app::{App, StatefulList},
+    config::THEME,
     entry::entries_to_spans,
     help::Help,
     input::{ConfirmationContext, Input, Mode, SearchContext},
     message::Kind as MessageKind,
     search::FuzzyFinder,
-    utils, THEME,
+    utils,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},

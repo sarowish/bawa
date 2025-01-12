@@ -1,4 +1,4 @@
-use crate::KEY_BINDINGS;
+use crate::config::KEY_BINDINGS;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 

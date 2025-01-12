@@ -1,4 +1,4 @@
-use crate::{utils, CLAP_ARGS};
+use crate::{cli::CLAP_ARGS, utils};
 use anyhow::Result;
 use crossterm::style::Stylize;
 use serde::Deserialize;

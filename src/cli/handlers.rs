@@ -1,4 +1,5 @@
-use crate::{app::App, entry::entries_to_spans, profile::Profiles, utils, CLAP_ARGS};
+use super::CLAP_ARGS;
+use crate::{app::App, entry::entries_to_spans, profile::Profiles, utils};
 use anyhow::{Context, Result};
 use clap::{parser::ValueSource, ArgMatches};
 use crossterm::style::Stylize;

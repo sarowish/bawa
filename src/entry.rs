@@ -1,4 +1,4 @@
-use crate::{OPTIONS, THEME};
+use crate::{config::THEME, OPTIONS};
 use anyhow::Result;
 use ratatui::{
     style::{Color, Style},

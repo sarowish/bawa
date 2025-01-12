@@ -1,10 +1,12 @@
 use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint};
 pub use handlers::handle_subcommands;
-use std::env;
+use std::{env, sync::LazyLock};
 
 mod commands;
 mod completion;
 mod handlers;
+
+pub static CLAP_ARGS: LazyLock<ArgMatches> = LazyLock::new(get_matches);
 
 pub fn build_command() -> Command {
     Command::new(env!("CARGO_PKG_NAME"))

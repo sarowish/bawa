@@ -6,16 +6,27 @@ use self::{
     keys::{KeyBindings, UserKeyBindings},
     options::{Options, UserOptions},
 };
-use crate::{utils, CLAP_ARGS};
+use crate::{cli::CLAP_ARGS, utils};
 use anyhow::Result;
 use serde::Deserialize;
 use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
+    sync::LazyLock,
 };
 use theme::{Theme, UserTheme};
 
+static CONFIG: LazyLock<Config> = LazyLock::new(|| match Config::new() {
+    Ok(config) => config,
+    Err(e) => {
+        eprintln!("{e:?}");
+        std::process::exit(1);
+    }
+});
+pub static OPTIONS: LazyLock<&Options> = LazyLock::new(|| &CONFIG.options);
+pub static KEY_BINDINGS: LazyLock<&KeyBindings> = LazyLock::new(|| &CONFIG.key_bindings);
+pub static THEME: LazyLock<&Theme> = LazyLock::new(|| &CONFIG.theme);
 const CONFIG_FILE: &str = "config.toml";
 
 #[derive(Deserialize)]

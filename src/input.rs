@@ -3,10 +3,10 @@ use std::ops::RangeBounds;
 use crate::{
     app::App,
     commands::{Command, HelpCommand, ProfileSelectionCommand},
+    config::KEY_BINDINGS,
     help::Help,
     profile::Profiles,
     search::FuzzyFinder,
-    KEY_BINDINGS,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use unicode_segmentation::UnicodeSegmentation;
