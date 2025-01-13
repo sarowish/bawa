@@ -225,7 +225,7 @@ impl Input {
         self.clear_range(self.idx..);
     }
 
-    fn update(&mut self, key: KeyEvent) {
+    fn update(&mut self, key: KeyEvent) -> bool {
         self.change = None;
 
         match (key.code, key.modifiers) {
@@ -250,6 +250,8 @@ impl Input {
             (KeyCode::Char(c), _) => self.insert_key(c),
             _ => {}
         }
+
+        self.change.is_some()
     }
 }
 
@@ -389,13 +391,8 @@ pub fn handle_key_fuzzy_mode(key: KeyEvent, fuzzy_finder: &mut FuzzyFinder) {
         (KeyCode::Up | KeyCode::BackTab, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
             fuzzy_finder.matched_items.previous();
         }
-        _ => {
-            input.update(key);
-
-            if input.change.is_some() {
-                fuzzy_finder.update_matches();
-            }
-        }
+        _ if input.update(key) => fuzzy_finder.update_matches(),
+        _ => {}
     }
 }
 
