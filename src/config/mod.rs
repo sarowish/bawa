@@ -13,7 +13,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
-    sync::LazyLock,
+    sync::{LazyLock, Once},
 };
 use theme::{Theme, UserTheme};
 
@@ -27,6 +27,7 @@ static CONFIG: LazyLock<Config> = LazyLock::new(|| match Config::new() {
 pub static OPTIONS: LazyLock<&Options> = LazyLock::new(|| &CONFIG.options);
 pub static KEY_BINDINGS: LazyLock<&KeyBindings> = LazyLock::new(|| &CONFIG.key_bindings);
 pub static THEME: LazyLock<&Theme> = LazyLock::new(|| &CONFIG.theme);
+pub static SKIP_CONFIG: Once = Once::new();
 const CONFIG_FILE: &str = "config.toml";
 
 #[derive(Deserialize)]
@@ -46,6 +47,10 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Result<Self> {
+        if SKIP_CONFIG.is_completed() {
+            return Ok(Self::default());
+        }
+
         let config_file = match CLAP_ARGS.get_one::<PathBuf>("config") {
             Some(path) => path.to_owned(),
             None => utils::get_config_dir()?.join(CONFIG_FILE),

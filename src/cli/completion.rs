@@ -1,4 +1,5 @@
 use crate::{
+    config::SKIP_CONFIG,
     profile::{get_profiles, Profiles},
     search::FuzzyFinder,
 };
@@ -22,6 +23,7 @@ pub fn profile_completer(current: &OsStr) -> Vec<CompletionCandidate> {
 }
 
 pub fn entry_completer(current: &OsStr) -> Vec<CompletionCandidate> {
+    SKIP_CONFIG.call_once(|| {});
     let mut candidates = Vec::new();
 
     if let Some(pattern) = current.to_str() {
