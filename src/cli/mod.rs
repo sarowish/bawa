@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint};
+use clap::{builder::ValueParser, Arg, ArgAction, ArgMatches, Command};
 pub use handlers::handle_subcommands;
 use std::{env, sync::LazyLock};
 
@@ -17,7 +17,7 @@ pub fn build_command() -> Command {
                 .short('c')
                 .long("config")
                 .help("Path to configuration file")
-                .value_hint(ValueHint::FilePath)
+                .value_parser(ValueParser::path_buf())
                 .value_name("FILE"),
         )
         .arg(
@@ -32,7 +32,7 @@ pub fn build_command() -> Command {
                 .short('s')
                 .long("save-file")
                 .help("Path to save file")
-                .value_hint(ValueHint::FilePath)
+                .value_parser(ValueParser::path_buf())
                 .value_name("FILE"),
         )
         .subcommands(commands::create_entry_subcommands())
