@@ -1,0 +1,71 @@
+save_file_path = ""
+auto_mark_save_file = false
+hide_extensions = false
+rename = { cursor = "before_ext" }
+
+[theme]
+title = { fg = "Cyan", modifiers = "bold" }
+selected = { fg = "Magenta", modifiers = "bold" }
+marked = { fg = "DarkGray", modifiers = "crossed_out" }
+active = { fg = "Yellow", modifiers = "bold" }
+fuzzy_selected = { fg = "Magenta" }
+highlight = { fg = "Yellow" }
+confirmation_border = { fg = "Blue" }
+error = { fg = "Red" }
+warning = { fg = "Yellow" }
+help = { fg = "Green" }
+
+[key_bindings]
+"j" = "on_down"
+"down" = "on_down"
+"k" = "on_up"
+"up" = "on_up"
+"h" = "on_left"
+"left" = "on_left"
+"l" = "on_right"
+"right" = "on_right"
+"g" = "select_first"
+"G" = "select_last"
+"J" = "down_directory"
+"shift-down" = "down_directory"
+"K" = "up_directory"
+"shift-up" = "up_directory"
+"f" = "load_save_file"
+"ctrl-f" = "load_active_save_file"
+"F" = "mark_save_file"
+"i" = "import_save_file"
+"I" = "import_save_file_top_level"
+"R" = "replace_save_file"
+"d" = "delete_file"
+"c" = "create_folder"
+"C" = "create_folder_top_level"
+"r" = "rename"
+"p" = "move_entries"
+"P" = "move_entries_top_level"
+"a" = "open_all_folds"
+"z" = "close_all_folds"
+"w" = "select_profile"
+"ctrl-h" = "toggle_help"
+"f1" = "toggle_help"
+"/" = "enter_search"
+"n" = "repeat_last_search"
+"N" = "repeat_last_search_backward"
+"s" = "open_fuzzy_finder"
+"space" = "mark_entry"
+"esc" = "reset"
+"q" = "quit"
+"ctrl-c" = "quit"
+
+[key_bindings.profile_selection]
+"c" = "create"
+"r" = "rename"
+"d" = "delete"
+"enter" = "select"
+"esc" = "abort"
+
+[key_bindings.help]
+"ctrl-y" = "scroll_up"
+"ctrl-e" = "scroll_down"
+"g" = "go_to_top"
+"G" = "go_to_bottom"
+"esc" = "abort"
