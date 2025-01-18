@@ -1,3 +1,4 @@
+use super::MergeConfig;
 use crate::commands::{Command, HelpCommand, ProfileSelectionCommand};
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -176,25 +177,23 @@ where
     Ok(())
 }
 
-impl TryFrom<UserKeyBindings> for KeyBindings {
-    type Error = anyhow::Error;
+impl MergeConfig for KeyBindings {
+    type Other = UserKeyBindings;
 
-    fn try_from(user_key_bindings: UserKeyBindings) -> Result<Self, Self::Error> {
-        let mut key_bindings = KeyBindings::default();
-
+    fn merge(&mut self, user_key_bindings: Self::Other) -> Result<()> {
         if let Some(bindings) = user_key_bindings.general {
-            set_bindings(&mut key_bindings, &bindings)?;
+            set_bindings(&mut self.general, &bindings)?;
         }
 
         if let Some(bindings) = user_key_bindings.profile_selection {
-            set_bindings(&mut key_bindings.profile_selection, &bindings)?;
+            set_bindings(&mut self.profile_selection, &bindings)?;
         }
 
         if let Some(bindings) = user_key_bindings.help {
-            set_bindings(&mut key_bindings.help, &bindings)?;
+            set_bindings(&mut self.help, &bindings)?;
         }
 
-        Ok(key_bindings)
+        Ok(())
     }
 }
 

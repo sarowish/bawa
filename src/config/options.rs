@@ -1,4 +1,5 @@
-use crate::{cli::CLAP_ARGS, utils};
+use super::MergeConfig;
+use crate::utils;
 use anyhow::Result;
 use crossterm::style::Stylize;
 use serde::Deserialize;
@@ -47,14 +48,6 @@ pub struct Options {
     pub rename: RenameOptions,
 }
 
-impl Options {
-    pub fn override_with_clap_args(&mut self) {
-        if let Some(save_file_path) = CLAP_ARGS.get_one::<PathBuf>("save_file") {
-            save_file_path.clone_into(&mut self.save_file_path);
-        }
-    }
-}
-
 impl Default for Options {
     fn default() -> Self {
         Options {
@@ -66,14 +59,14 @@ impl Default for Options {
     }
 }
 
-impl From<UserOptions> for Options {
-    fn from(user_options: UserOptions) -> Self {
-        let mut options = Options::default();
+impl MergeConfig for Options {
+    type Other = UserOptions;
 
+    fn merge(&mut self, user_options: Self::Other) -> Result<()> {
         macro_rules! set_options_field {
             ($name: ident) => {
                 if let Some(option) = user_options.$name {
-                    options.$name = option;
+                    self.$name = option;
                 }
             };
         }
@@ -83,7 +76,7 @@ impl From<UserOptions> for Options {
         set_options_field!(hide_extensions);
         set_options_field!(rename);
 
-        options
+        Ok(())
     }
 }
 

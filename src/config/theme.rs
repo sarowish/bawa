@@ -1,3 +1,4 @@
+use super::MergeConfig;
 use anyhow::{Context, Result};
 use ratatui::style::{Color, Modifier, Style};
 use serde::Deserialize;
@@ -176,16 +177,14 @@ impl Default for Theme {
     }
 }
 
-impl TryFrom<UserTheme> for Theme {
-    type Error = anyhow::Error;
+impl MergeConfig for Theme {
+    type Other = UserTheme;
 
-    fn try_from(user_theme: UserTheme) -> Result<Self, Self::Error> {
-        let mut theme = Theme::default();
-
+    fn merge(&mut self, user_theme: Self::Other) -> Result<()> {
         macro_rules! set_theme_field {
             ($name: ident) => {
                 if let Some(color) = user_theme.$name {
-                    theme.$name = UserStyle::to_style(&color).with_context(|| {
+                    self.$name = UserStyle::to_style(&color).with_context(|| {
                         format!("Error: couldn't set a field of \"{}\"", stringify!($name))
                     })?;
                 }
@@ -203,6 +202,6 @@ impl TryFrom<UserTheme> for Theme {
         set_theme_field!(warning);
         set_theme_field!(help);
 
-        Ok(theme)
+        Ok(())
     }
 }

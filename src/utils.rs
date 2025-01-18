@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -109,6 +110,26 @@ pub fn get_relative_path(parent: &Path, child: &Path) -> Result<String> {
     let components = get_relative_path_with_components(parent, child)?;
     let path = PathBuf::from_iter(components);
     Ok(path.to_string_lossy().to_string())
+}
+
+pub fn write_atomic(path: &Path, content: &[u8]) -> Result<()> {
+    let mut tmp = tempfile::Builder::new()
+        .prefix(path.file_name().unwrap())
+        .tempfile_in(path.parent().unwrap())?;
+    tmp.write_all(content)?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = path.metadata() {
+            let mode = meta.permissions().mode();
+            tmp.as_file()
+                .set_permissions(fs::Permissions::from_mode(mode))?;
+        }
+    }
+
+    tmp.persist(path)?;
+    Ok(())
 }
 
 pub fn upper_char_boundaries(text: &str) -> Vec<usize> {
