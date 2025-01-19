@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let res = app.run().await;
-    ratatui::restore();
+    ui::restore();
 
     if let Err(e) = res {
         eprintln!("{e:?}");

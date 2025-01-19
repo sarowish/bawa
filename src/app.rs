@@ -66,7 +66,7 @@ impl App {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        let mut terminal = ratatui::init();
+        let mut terminal = ui::init();
         let mut term_events = EventStream::new();
 
         self.auto_mark_save_file();

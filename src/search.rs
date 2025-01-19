@@ -4,15 +4,11 @@ use crate::{
     ui, utils,
 };
 use anyhow::Result;
-use crossterm::{
-    event::{Event, KeyCode},
-    terminal::disable_raw_mode,
-};
+use crossterm::event::{Event, KeyCode};
 use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
     Config, Matcher, Utf32String,
 };
-use ratatui::{TerminalOptions, Viewport};
 use std::fmt::Display;
 
 #[derive(Default)]
@@ -163,10 +159,7 @@ impl FuzzyFinder {
         self.update_matches();
 
         if self.matched_items.items.len() > 1 {
-            let terminal_options = TerminalOptions {
-                viewport: Viewport::Inline(25),
-            };
-            let mut terminal = ratatui::init_with_options(terminal_options);
+            let mut terminal = ui::init_inline(25);
 
             loop {
                 terminal.draw(|f| ui::draw_fuzzy_finder(f, self, f.area()))?;
@@ -186,7 +179,7 @@ impl FuzzyFinder {
             }
 
             terminal.clear()?;
-            disable_raw_mode()?;
+            ui::restore();
         }
 
         let selected_item = self.matched_items.get_selected();

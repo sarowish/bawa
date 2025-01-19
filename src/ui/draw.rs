@@ -1,53 +1,21 @@
+use super::{confirmation::draw_confirmation_window, popup::window_from_dimensions, set_cursor};
 use crate::{
     app::{App, StatefulList},
     config::THEME,
     entry::entries_to_spans,
     help::Help,
-    input::{ConfirmationContext, Input, Mode, SearchContext},
+    input::{Mode, SearchContext},
     message::Kind as MessageKind,
     search::FuzzyFinder,
-    utils,
 };
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Flex, Layout, Margin, Rect},
-    style::{Style, Stylize},
+    layout::{Constraint, Direction, Layout, Margin, Rect},
+    style::Style,
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Widget, Wrap},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use std::fmt::Display;
-
-fn popup_window_from_dimensions(height: u16, width: u16, r: Rect) -> Rect {
-    let hor = [Constraint::Length(width)];
-    let ver = [Constraint::Length(height)];
-    popup_window(&hor, &ver, r)
-}
-
-fn _popup_window_from_percentage(hor_percent: u16, ver_percent: u16, r: Rect) -> Rect {
-    let ver = [Constraint::Percentage(ver_percent)];
-    let hor = [Constraint::Percentage(hor_percent)];
-    popup_window(&hor, &ver, r)
-}
-
-fn popup_window(hor_constraints: &[Constraint], ver_constraints: &[Constraint], r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(ver_constraints)
-        .flex(Flex::Center)
-        .vertical_margin(1)
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(hor_constraints)
-        .flex(Flex::Center)
-        .horizontal_margin(1)
-        .split(popup_layout[0])[0]
-}
-
-fn set_cursor(f: &mut Frame, input: &Input, area: Rect) {
-    f.set_cursor_position((area.x + input.cursor_position(), area.y + 1));
-}
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let (main_layout, footer) = if app.footer_input.is_some() || !app.message.is_empty() {
@@ -81,7 +49,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_fuzzy_finder(
             f,
             &mut app.fuzzy_finder,
-            popup_window_from_dimensions(50, 90, f.area()),
+            window_from_dimensions(50, 90, f.area()),
         );
     }
 
@@ -185,7 +153,7 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
 }
 
 fn draw_help(f: &mut Frame, help: &mut Help) {
-    let window = popup_window_from_dimensions(45, 80, f.area());
+    let window = window_from_dimensions(45, 80, f.area());
     f.render_widget(Clear, window);
 
     let width = std::cmp::max(window.width.saturating_sub(2), 1);
@@ -265,7 +233,7 @@ fn draw_list_with_help<T: Display>(
     }
     .max(20);
 
-    let window = popup_window_from_dimensions(max_height, max_width, f.area());
+    let window = window_from_dimensions(max_height, max_width, f.area());
     f.render_widget(Clear, window);
 
     f.render_widget(
@@ -301,12 +269,6 @@ fn draw_list_with_help<T: Display>(
     f.render_widget(help_widget, help_area);
 }
 
-fn draw_confirmation_window(f: &mut Frame, app: &App, context: ConfirmationContext) {
-    let window = popup_window_from_dimensions(20, 70, f.area());
-    let prompt = ConfirmationPrompt::new(app, context);
-    f.render_widget(prompt, window);
-}
-
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let line = if let Some(input) = &app.footer_input {
         set_cursor(f, input, area);
@@ -325,109 +287,4 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     };
 
     f.render_widget(line, area);
-}
-
-#[derive(Debug)]
-pub struct ConfirmationPrompt {
-    title: String,
-    body: Vec<String>,
-}
-
-impl ConfirmationPrompt {
-    pub fn new(app: &App, context: ConfirmationContext) -> Self {
-        let title = match context {
-            ConfirmationContext::Deletion => {
-                let (count, postfix) = if app.marked_entries.is_empty() {
-                    (1, "")
-                } else {
-                    (app.marked_entries.len(), "s")
-                };
-                format!("Permanently delete {count} selected file{postfix}")
-            }
-            ConfirmationContext::Replacing => "Overwrite the selected file".to_string(),
-            ConfirmationContext::ProfileDeletion => {
-                "Permanently delete the selected profile".to_string()
-            }
-        };
-        let base_path = &app.profiles.get_profile().unwrap().path;
-
-        let body = match context {
-            ConfirmationContext::Deletion if !app.marked_entries.is_empty() => app
-                .marked_entries
-                .keys()
-                .map(|path| utils::get_relative_path(base_path, path).unwrap())
-                .collect(),
-            ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
-                vec![utils::get_relative_path(
-                    base_path,
-                    &app.visible_entries.get_selected().unwrap().borrow().path(),
-                )
-                .unwrap()]
-            }
-            ConfirmationContext::ProfileDeletion => {
-                vec![app.profiles.profiles.get_selected().unwrap().name.clone()]
-            }
-        };
-
-        Self {
-            title: title.to_string(),
-            body,
-        }
-    }
-}
-
-impl Widget for ConfirmationPrompt {
-    fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
-    where
-        Self: Sized,
-    {
-        Clear.render(area, buf);
-
-        Block::bordered()
-            .title(Line::styled(self.title, THEME.confirmation_border))
-            .border_type(BorderType::Rounded)
-            .border_style(THEME.confirmation_border)
-            .title_alignment(Alignment::Center)
-            .render(area, buf);
-
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(1)])
-            .margin(1)
-            .split(area);
-
-        let mut text = Paragraph::new(self.body.into_iter().map(Line::from).collect::<Vec<Line>>())
-            .block(
-                Block::default()
-                    .borders(Borders::BOTTOM)
-                    .border_style(THEME.confirmation_border),
-            );
-
-        if chunks[0].width > 0 {
-            text = text.wrap(Wrap { trim: false });
-        }
-
-        let (yes_area, no_area) = {
-            let chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Fill(1), Constraint::Fill(1)])
-                .split(chunks[1]);
-            (chunks[0], chunks[1])
-        };
-
-        let yes = Paragraph::new(Line::from(vec![
-            Span::styled("Y", Style::new().green()),
-            Span::raw("es"),
-        ]))
-        .centered();
-        let no = Paragraph::new(Line::from(vec![
-            Span::styled("N", Style::new().red()),
-            Span::raw("o"),
-        ]))
-        .centered();
-
-        text.render(chunks[0], buf);
-        yes.render(yes_area, buf);
-        no.render(no_area, buf);
-    }
 }
