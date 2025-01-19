@@ -68,12 +68,12 @@ pub struct Input {
     pub prompt: String,
     idx: usize,
     cursor_position: u16,
-    cursor_offset: u16,
+    pub cursor_offset: u16,
     change: Option<InputChange>,
 }
 
 impl Input {
-    pub fn new() -> Self {
+    pub fn _new() -> Self {
         Self {
             text: String::new(),
             prompt: String::new(),
@@ -84,16 +84,7 @@ impl Input {
         }
     }
 
-    pub fn with_prompt(mode: &Mode) -> Self {
-        let prompt = match mode {
-            Mode::Search(_) => "/",
-            Mode::ProfileCreation => "Profile Name: ",
-            Mode::EntryRenaming | Mode::ProfileRenaming => "Rename: ",
-            Mode::FolderCreation(_) => "Folder Name: ",
-            Mode::Normal => "",
-            _ => panic!(),
-        };
-
+    pub fn with_prompt(prompt: &str) -> Self {
         Self {
             text: String::new(),
             prompt: prompt.to_string(),
@@ -252,6 +243,21 @@ impl Input {
         }
 
         self.change.is_some()
+    }
+}
+
+impl From<&Mode> for Input {
+    fn from(value: &Mode) -> Self {
+        let prompt = match value {
+            Mode::Search(_) => "/",
+            Mode::ProfileCreation => "Profile Name: ",
+            Mode::EntryRenaming | Mode::ProfileRenaming => "Rename: ",
+            Mode::FolderCreation(_) => "Folder Name: ",
+            Mode::Normal => "",
+            _ => panic!(),
+        };
+
+        Self::with_prompt(prompt)
     }
 }
 

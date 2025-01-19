@@ -133,6 +133,8 @@ pub struct UserTheme {
     active: Option<UserStyle>,
     fuzzy_selected: Option<UserStyle>,
     highlight: Option<UserStyle>,
+    fuzzy_prompt: Option<UserStyle>,
+    fuzzy_counter: Option<UserStyle>,
     confirmation_border: Option<UserStyle>,
     error: Option<UserStyle>,
     warning: Option<UserStyle>,
@@ -146,6 +148,8 @@ pub struct Theme {
     pub active: Style,
     pub fuzzy_selected: Style,
     pub highlight: Style,
+    pub fuzzy_prompt: Style,
+    pub fuzzy_counter: Style,
     pub confirmation_border: Style,
     pub error: Style,
     pub warning: Style,
@@ -169,6 +173,8 @@ impl Default for Theme {
                 .add_modifier(Modifier::BOLD),
             fuzzy_selected: Style::default().fg(Color::Magenta),
             highlight: Style::default().fg(Color::Yellow),
+            fuzzy_prompt: Style::default().fg(Color::Blue),
+            fuzzy_counter: Style::default().fg(Color::DarkGray),
             confirmation_border: Style::default().fg(Color::Blue),
             error: Style::default().fg(Color::Red),
             warning: Style::default().fg(Color::Yellow),
@@ -197,6 +203,8 @@ impl MergeConfig for Theme {
         set_theme_field!(active);
         set_theme_field!(fuzzy_selected);
         set_theme_field!(highlight);
+        set_theme_field!(fuzzy_prompt);
+        set_theme_field!(fuzzy_counter);
         set_theme_field!(confirmation_border);
         set_theme_field!(error);
         set_theme_field!(warning);

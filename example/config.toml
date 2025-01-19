@@ -10,6 +10,8 @@ marked = { fg = "DarkGray", modifiers = "crossed_out" }
 active = { fg = "Yellow", modifiers = "bold" }
 fuzzy_selected = { fg = "Magenta" }
 highlight = { fg = "Yellow" }
+fuzzy_prompt = { fg = "Blue" }
+fuzzy_counter = { fg = "DarkGray" }
 confirmation_border = { fg = "Blue" }
 error = { fg = "Red" }
 warning = { fg = "Yellow" }

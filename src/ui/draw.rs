@@ -110,16 +110,41 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
         (chunks[0], chunks[1])
     };
 
-    let input = &fuzzy_finder.input;
-    let search = Paragraph::new(input.text.clone()).block(
-        Block::default()
-            .title(Span::styled("Search", THEME.title))
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded),
-    );
+    let search_block = Block::default()
+        .title(Span::styled("Search", THEME.title))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded);
 
-    set_cursor(f, input, search_bar_area.inner(Margin::new(1, 0)));
-    f.render_widget(search, search_bar_area);
+    f.render_widget(&search_block, search_bar_area);
+
+    let (prompt_area, input_area, mut counter_area) = {
+        let chunks = Layout::horizontal([
+            Constraint::Length(fuzzy_finder.input.cursor_offset),
+            Constraint::Length(fuzzy_finder.input.text.len() as u16),
+            Constraint::Fill(1),
+        ])
+        .split(search_block.inner(search_bar_area));
+        (chunks[0], chunks[1], chunks[2])
+    };
+
+    let prompt = Paragraph::new(fuzzy_finder.input.prompt.clone()).style(THEME.fuzzy_prompt);
+    f.render_widget(prompt, prompt_area);
+
+    let input = Paragraph::new(fuzzy_finder.input.text.clone());
+    set_cursor(f, &fuzzy_finder.input, prompt_area);
+    f.render_widget(input, input_area);
+
+    counter_area = counter_area.inner(Margin::new(1, 0));
+    let counter = format!(
+        "{} / {}",
+        fuzzy_finder.match_count, fuzzy_finder.total_count
+    );
+    if counter.len() <= counter_area.width.into() {
+        let counter = Paragraph::new(counter)
+            .style(THEME.fuzzy_counter)
+            .right_aligned();
+        f.render_widget(counter, counter_area);
+    }
 
     let selected_idx = fuzzy_finder.matched_items.state.selected().unwrap_or(0);
     let results = List::new(fuzzy_finder.matched_items.items.iter().enumerate().map(

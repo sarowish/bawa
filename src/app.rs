@@ -204,7 +204,7 @@ impl App {
     }
 
     pub fn take_input(&mut self, mode: Mode) {
-        self.footer_input = Some(Input::with_prompt(&mode));
+        self.footer_input = Some(Input::from(&mode));
         self.mode = mode;
         self.message.clear();
     }

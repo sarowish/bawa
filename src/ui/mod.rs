@@ -88,5 +88,5 @@ pub fn restore() {
 }
 
 fn set_cursor(f: &mut Frame, input: &Input, area: Rect) {
-    f.set_cursor_position((area.x + input.cursor_position(), area.y + 1));
+    f.set_cursor_position((area.x + input.cursor_position(), area.y));
 }

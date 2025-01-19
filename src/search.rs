@@ -93,16 +93,20 @@ pub struct FuzzyFinder {
     pattern: Pattern,
     paths: Vec<Utf32String>,
     pub matched_items: StatefulList<MatchedItem>,
+    pub total_count: usize,
+    pub match_count: usize,
 }
 
 impl FuzzyFinder {
     pub fn new() -> Self {
         Self {
             matcher: Matcher::new(Config::DEFAULT.match_paths()),
-            input: Input::new(),
+            input: Input::with_prompt("> "),
             pattern: Pattern::default(),
             paths: Vec::new(),
             matched_items: StatefulList::with_items(Vec::new()),
+            total_count: 0,
+            match_count: 0,
         }
     }
 
@@ -111,6 +115,7 @@ impl FuzzyFinder {
             .iter()
             .map(|path| Utf32String::from(path.clone()))
             .collect();
+        self.total_count = self.paths.len();
     }
 
     pub fn reset(&mut self) {
@@ -140,6 +145,7 @@ impl FuzzyFinder {
             }
         }
 
+        self.match_count = self.matched_items.items.len();
         self.matched_items
             .items
             .sort_by(|a, b| b.score.cmp(&a.score));
