@@ -2,7 +2,7 @@ use crate::config::KEY_BINDINGS;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 
-const DESCRIPTIONS_LEN: usize = 32;
+const DESCRIPTIONS_LEN: usize = 33;
 const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Go one line downward",                                 // On Down
     "Go one line upward",                                   // On Up
@@ -33,6 +33,7 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Repeat the latest search",                             // Repeat Last Search
     "Repeat the latest search backward",                    // Repeat Last Search Backward
     "Open Fuzzy Finder",                                    // Open Fuzzy Finder
+    "Open Global Fuzzy Finder",                             // Ermm
     "Mark the selected entry",                              // Mark Entry
     "Unmark all marked entries",                            // Reset
     "Quit application",                                     // Quit

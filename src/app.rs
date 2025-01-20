@@ -810,18 +810,37 @@ impl App {
         self.set_index_of_active_list(new_idx.copied());
     }
 
-    pub fn open_fuzzy_finder(&mut self) {
-        if let Some(profile) = self.profiles.get_profile() {
-            self.fuzzy_finder
-                .fill_paths(&profile.get_file_rel_paths(false));
-            self.fuzzy_finder.update_matches();
+    pub fn open_fuzzy_finder(&mut self, global: bool) {
+        if global {
+            for profile in &mut self.profiles.profiles.items {
+                profile.load_entries().unwrap();
+                self.fuzzy_finder.fill_paths(profile);
+            }
+        } else if let Some(profile) = self.profiles.get_profile() {
+            self.fuzzy_finder.fill_paths(profile);
+            self.fuzzy_finder.clean_profile();
         }
+        self.fuzzy_finder.update_matches();
     }
 
     pub fn jump_to_entry(&mut self) {
         let selected_item = self.fuzzy_finder.matched_items.get_selected();
-        let rel_path = selected_item.as_ref().unwrap().text.clone();
+
+        let rel_path = selected_item.as_ref().unwrap().path();
         let components = rel_path.split(path::MAIN_SEPARATOR).collect::<Vec<&str>>();
+
+        let profile_idx = self
+            .profiles
+            .profiles
+            .items
+            .iter()
+            .position(|profile| profile.name == selected_item.unwrap().profile());
+
+        if profile_idx.is_some() {
+            self.profiles.profiles.state.select(profile_idx);
+            self.confirm_profile_selection();
+        }
+
         let mut idx = 0;
 
         for component in components {

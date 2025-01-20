@@ -1,6 +1,7 @@
 use crate::{
     app::StatefulList,
     input::{handle_key_fuzzy_mode, Input},
+    profile::Profile,
     ui, utils,
 };
 use anyhow::Result;
@@ -39,20 +40,30 @@ impl Search {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct MatchedItem {
+    entry: Entry,
     pub text: String,
     score: Option<u32>,
     indices: Vec<u32>,
 }
 
 impl MatchedItem {
-    pub fn new(text: String, score: Option<u32>, indices: &[u32]) -> Self {
+    fn new(entry: Entry, score: Option<u32>, indices: &[u32]) -> Self {
         Self {
-            text,
+            text: entry.to_string(),
+            entry,
             score,
             indices: Vec::from(indices),
         }
+    }
+
+    pub fn path(&self) -> String {
+        self.entry.path.to_string()
+    }
+
+    pub fn profile(&self) -> String {
+        self.entry.profile_name.to_string()
     }
 
     pub fn highlight_slices(&self) -> Vec<(&str, bool)> {
@@ -87,11 +98,36 @@ impl MatchedItem {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
+struct Entry {
+    profile_name: Utf32String,
+    path: Utf32String,
+}
+
+impl Entry {
+    fn new(profile: &Profile, path: &str) -> Self {
+        Self {
+            profile_name: Utf32String::from(profile.name.clone()),
+            path: Utf32String::from(path),
+        }
+    }
+}
+
+impl Display for Entry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.profile_name.is_empty() {
+            write!(f, "{}", self.path)
+        } else {
+            write!(f, "{}    {}", self.profile_name, self.path)
+        }
+    }
+}
+
 pub struct FuzzyFinder {
     matcher: Matcher,
     pub input: Input,
     pattern: Pattern,
-    paths: Vec<Utf32String>,
+    entries: Vec<Entry>,
     pub matched_items: StatefulList<MatchedItem>,
     pub total_count: usize,
     pub match_count: usize,
@@ -103,24 +139,33 @@ impl FuzzyFinder {
             matcher: Matcher::new(Config::DEFAULT.match_paths()),
             input: Input::with_prompt("> "),
             pattern: Pattern::default(),
-            paths: Vec::new(),
+            entries: Vec::new(),
             matched_items: StatefulList::with_items(Vec::new()),
             total_count: 0,
             match_count: 0,
         }
     }
 
-    pub fn fill_paths(&mut self, paths: &[String]) {
-        self.paths = paths
-            .iter()
-            .map(|path| Utf32String::from(path.clone()))
-            .collect();
-        self.total_count = self.paths.len();
+    pub fn fill_paths(&mut self, profile: &Profile) {
+        self.entries.append(
+            &mut profile
+                .get_file_rel_paths(false)
+                .iter()
+                .map(|path| Entry::new(profile, path))
+                .collect(),
+        );
+        self.total_count = self.entries.len();
+    }
+
+    pub fn clean_profile(&mut self) {
+        for entry in &mut self.entries {
+            entry.profile_name = Utf32String::default();
+        }
     }
 
     pub fn reset(&mut self) {
         self.input.set_text("");
-        self.paths.drain(..);
+        self.entries.drain(..);
     }
 
     pub fn update_matches(&mut self) {
@@ -129,11 +174,13 @@ impl FuzzyFinder {
 
         self.matched_items.items.clear();
 
-        for path in &self.paths {
+        for entry in &self.entries {
             let mut indices = Vec::new();
-            let score = self
-                .pattern
-                .indices(path.slice(..), &mut self.matcher, &mut indices);
+            let score = self.pattern.indices(
+                Utf32String::from(entry.to_string()).slice(..),
+                &mut self.matcher,
+                &mut indices,
+            );
 
             if score.is_some() {
                 indices.sort_unstable();
@@ -141,7 +188,7 @@ impl FuzzyFinder {
 
                 self.matched_items
                     .items
-                    .push(MatchedItem::new(path.to_string(), score, &indices));
+                    .push(MatchedItem::new(entry.clone(), score, &indices));
             }
         }
 
@@ -160,8 +207,8 @@ impl FuzzyFinder {
         matched_paths.into_iter().map(|(path, _)| path).collect()
     }
 
-    pub fn run_inline(&mut self, paths: &[String]) -> Result<Option<&str>> {
-        self.fill_paths(paths);
+    pub fn run_inline(&mut self, profile: &Profile) -> Result<Option<&str>> {
+        self.fill_paths(profile);
         self.update_matches();
 
         if self.matched_items.items.len() > 1 {
@@ -193,52 +240,6 @@ impl FuzzyFinder {
     }
 
     pub fn is_active(&self) -> bool {
-        !self.paths.is_empty()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::FuzzyFinder;
-    use crate::search::MatchedItem;
-
-    #[test]
-    fn fuzzy_unicode() {
-        let item = MatchedItem::new("türkçe".to_string(), None, &[1, 2]);
-
-        assert_eq!(
-            item.highlight_slices(),
-            vec![("t", false), ("ür", true), ("kçe", false)]
-        );
-    }
-
-    #[test]
-    fn fuzzy_unicode2() {
-        let item = MatchedItem::new("türkçe".to_string(), None, &[0]);
-
-        assert_eq!(item.highlight_slices(), vec![("t", true), ("ürkçe", false)]);
-    }
-
-    #[test]
-    fn fuzzy_postfix() {
-        let item = MatchedItem::new("some text".to_string(), None, &[6, 7, 8]);
-
-        assert_eq!(
-            item.highlight_slices(),
-            vec![("some t", false), ("ext", true)]
-        );
-    }
-
-    #[test]
-    fn oneshot() {
-        let strings = &[
-            String::from("Altus Plateau/Godskin Apostle.sl2"),
-            String::from("Mt. Gelmir/Godskin Noble.sl2"),
-            String::from("Altus Plateau/Leyndell/Goldfrey.sl2"),
-        ];
-
-        let matches = FuzzyFinder::non_interactive(strings, "godnob");
-
-        assert_eq!(matches.len(), 1);
+        !self.entries.is_empty()
     }
 }

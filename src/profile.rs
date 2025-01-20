@@ -54,8 +54,10 @@ impl Profile {
     }
 
     pub fn load_entries(&mut self) -> Result<()> {
-        self.entries = Entry::entries_from_path(&self.path, 0)?;
-        self.read_active_save_file();
+        if self.entries.is_empty() {
+            self.entries = Entry::entries_from_path(&self.path, 0)?;
+            self.read_active_save_file();
+        }
 
         Ok(())
     }
@@ -217,7 +219,9 @@ impl Profiles {
                 return Ok(false);
             }
 
-            self.profiles.items[idx].entries.drain(..);
+            for profile in &mut self.profiles.items {
+                profile.entries.drain(..);
+            }
         }
 
         if let Some(profile) = self.profiles.get_mut_selected() {
