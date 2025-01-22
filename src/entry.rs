@@ -1,4 +1,4 @@
-use crate::{config::THEME, OPTIONS};
+use crate::{config::THEME, utils, OPTIONS};
 use anyhow::Result;
 use ratatui::{
     style::{Color, Style},
@@ -23,31 +23,10 @@ pub enum Entry {
     Folder {
         name: String,
         path: PathBuf,
-        entries: Vec<Rc<RefCell<Entry>>>,
+        entries: Vec<RcEntry>,
         is_fold_opened: bool,
         depth: usize,
     },
-}
-
-pub fn find_entry(entries: &[RcEntry], components: &[String]) -> Vec<(usize, RcEntry)> {
-    let mut found_entries = Vec::new();
-    let component = &components[0];
-
-    let idx = entries
-        .iter()
-        .position(|entry| entry.borrow().file_name() == *component)
-        .unwrap();
-
-    found_entries.push((idx, entries[idx].clone()));
-
-    if components.len() != 1 {
-        found_entries.append(&mut find_entry(
-            entries[idx].borrow().entries(),
-            &components[1..],
-        ));
-    }
-
-    found_entries
 }
 
 impl Entry {
@@ -67,6 +46,10 @@ impl Entry {
         })
     }
 
+    pub fn new_rc(path: PathBuf, depth: usize) -> Result<RcEntry> {
+        Ok(Rc::new(RefCell::new(Entry::new(path, depth)?)))
+    }
+
     pub fn entries_from_path(path: &Path, depth: usize) -> Result<Vec<RcEntry>> {
         path.read_dir()?
             .flatten()
@@ -76,28 +59,26 @@ impl Entry {
                     || path
                         .file_name()
                         .is_some_and(|file_name| file_name != "active_save_file"))
-                .then(|| Entry::new(path, depth).map(RefCell::new).map(Rc::new))
+                .then(|| Entry::new_rc(path, depth))
             })
             .collect()
     }
 
-    pub fn entries(&self) -> &Vec<RcEntry> {
-        if let Self::Folder { entries, .. } = self {
-            entries
-        } else {
-            panic!();
+    pub fn entries(&self) -> &[RcEntry] {
+        match self {
+            Self::Folder { entries, .. } => entries,
+            Self::File { .. } => unreachable!(),
         }
     }
 
     pub fn entries_mut(&mut self) -> &mut Vec<RcEntry> {
-        if let Self::Folder { entries, .. } = self {
-            entries
-        } else {
-            panic!();
+        match self {
+            Self::Folder { entries, .. } => entries,
+            Self::File { .. } => unreachable!(),
         }
     }
 
-    pub fn children(&self, ignore_fold: bool) -> Vec<RcEntry> {
+    pub fn descendants(&self, ignore_fold: bool) -> Vec<RcEntry> {
         match self {
             Entry::Folder {
                 entries,
@@ -108,7 +89,7 @@ impl Entry {
 
                 for entry in entries {
                     items.push(entry.clone());
-                    items.append(&mut entry.borrow().children(ignore_fold));
+                    items.append(&mut entry.borrow().descendants(ignore_fold));
                 }
 
                 items
@@ -117,7 +98,7 @@ impl Entry {
         }
     }
 
-    pub fn children_len(&self) -> usize {
+    pub fn descendants_len(&self) -> usize {
         match self {
             Entry::Folder {
                 entries,
@@ -127,7 +108,7 @@ impl Entry {
                 entries.len()
                     + entries
                         .iter()
-                        .map(|entry| entry.borrow().children_len())
+                        .map(|entry| entry.borrow().descendants_len())
                         .sum::<usize>()
             }
             _ => 0,
@@ -171,6 +152,35 @@ impl Entry {
             *child.borrow_mut().path_mut() = path.join(child_name);
             child.borrow_mut().update_children_path();
         }
+    }
+
+    pub fn find_entry(&self, entry_path: &Path) -> Vec<(usize, RcEntry)> {
+        let components =
+            utils::get_relative_path_with_components(&self.path(), entry_path).unwrap();
+
+        (!components.is_empty())
+            .then(|| self.find_entry_helper(&components))
+            .unwrap_or_default()
+    }
+
+    fn find_entry_helper(&self, components: &[String]) -> Vec<(usize, RcEntry)> {
+        let entries = self.entries();
+        let mut found_entries = Vec::new();
+        let component = &components[0];
+
+        let idx = self
+            .entries()
+            .iter()
+            .position(|entry| entry.borrow().file_name() == *component)
+            .unwrap();
+
+        found_entries.push((idx, entries[idx].clone()));
+
+        if components.len() != 1 {
+            found_entries.append(&mut entries[idx].borrow().find_entry_helper(&components[1..]));
+        }
+
+        found_entries
     }
 
     pub fn name(&self) -> String {

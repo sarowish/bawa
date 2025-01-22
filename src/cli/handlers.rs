@@ -88,7 +88,7 @@ fn handle_rename_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
 fn handle_delete_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     if let Some(path) = get_entry_path(args, app)? {
         let profile = app.profiles.get_profile().unwrap();
-        let path_to_entry = profile.find_entry(&path);
+        let path_to_entry = profile.folder.find_entry(&path);
         let entry = &path_to_entry.last().context("There is no such entry.")?.1;
         entry.borrow().delete()?;
     } else {
@@ -112,7 +112,7 @@ pub fn handle_profile_subcommand(profiles: &mut Profiles, args: &ArgMatches) -> 
             profiles.rename_selected_profile(args.get_one::<String>("new_name").unwrap())?;
         }
         Some(("list", args)) => {
-            for (idx, profile) in profiles.profiles.items.iter().enumerate() {
+            for (idx, profile) in profiles.inner.items.iter().enumerate() {
                 println!(
                     "{}{}{}",
                     if args.get_flag("no_index") {
@@ -120,7 +120,7 @@ pub fn handle_profile_subcommand(profiles: &mut Profiles, args: &ArgMatches) -> 
                     } else {
                         format!("[{idx}] ").bold().to_string()
                     },
-                    profile.name,
+                    profile.name(),
                     if profiles
                         .active_profile
                         .is_some_and(|active_idx| active_idx == idx)
@@ -162,7 +162,7 @@ fn get_entry_path(args: &ArgMatches, app: &mut App) -> Result<Option<PathBuf>> {
         relative_path = app.fuzzy_finder.run_inline(&paths)?;
     }
 
-    Ok(relative_path.map(|rel_path| profile.path.join(rel_path)))
+    Ok(relative_path.map(|rel_path| profile.abs_path_to(rel_path)))
 }
 
 fn select_profile_by_idx_or_name(profiles: &mut Profiles, args: &ArgMatches) -> Result<()> {
@@ -171,10 +171,10 @@ fn select_profile_by_idx_or_name(profiles: &mut Profiles, args: &ArgMatches) -> 
     if idx.is_none() {
         if let Some(name) = args.get_one::<String>("profile_name") {
             idx = profiles
-                .profiles
+                .inner
                 .items
                 .iter()
-                .position(|profile| profile.name == *name);
+                .position(|profile| profile.name() == *name);
 
             if idx.is_none() {
                 return Err(anyhow::anyhow!("No profile with the name \"{}\".", name));
@@ -183,9 +183,9 @@ fn select_profile_by_idx_or_name(profiles: &mut Profiles, args: &ArgMatches) -> 
     }
 
     if idx.is_some() {
-        profiles.profiles.state.select(idx);
+        profiles.inner.state.select(idx);
     } else {
-        profiles.profiles.state.select(profiles.active_profile);
+        profiles.inner.state.select(profiles.active_profile);
     }
 
     Ok(())

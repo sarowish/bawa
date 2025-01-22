@@ -322,13 +322,13 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
 }
 
 fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
-    let profiles = &mut app.profiles.profiles;
+    let profiles = &mut app.profiles.inner;
 
     if let Some(command) = KEY_BINDINGS.profile_selection.get(&key) {
         match command {
             ProfileSelectionCommand::Create => app.take_input(Mode::ProfileCreation),
             ProfileSelectionCommand::Rename => {
-                let text = profiles.get_selected().unwrap().name.clone();
+                let text = profiles.get_selected().unwrap().name().to_owned();
                 app.take_input(Mode::ProfileRenaming);
                 app.footer_input.as_mut().unwrap().set_text(&text);
             }

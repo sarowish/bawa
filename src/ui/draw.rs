@@ -40,7 +40,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_list_with_help(
             f,
             "Profiles".to_string(),
-            &mut app.profiles.profiles,
+            &mut app.profiles.inner,
             &app.help.bindings.profile_selection,
         );
     }
@@ -88,12 +88,7 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .title(
-                        app.profiles
-                            .get_profile()
-                            .map(|profile| profile.name.clone())
-                            .unwrap_or_default(),
-                    )
+                    .title(profile.name())
                     .title_style(THEME.title),
             )
             .highlight_style(THEME.selected)

@@ -1,5 +1,5 @@
 use super::popup::window_from_dimensions;
-use crate::{app::App, config::THEME, input::ConfirmationContext, utils};
+use crate::{app::App, config::THEME, input::ConfirmationContext};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Style, Stylize},
@@ -35,23 +35,21 @@ impl ConfirmationPrompt {
                 "Permanently delete the selected profile".to_string()
             }
         };
-        let base_path = &app.profiles.get_profile().unwrap().path;
+
+        let profile = app.profiles.get_profile().unwrap();
 
         let body = match context {
             ConfirmationContext::Deletion if !app.marked_entries.is_empty() => app
                 .marked_entries
                 .keys()
-                .map(|path| utils::get_relative_path(base_path, path).unwrap())
+                .map(|path| profile.rel_path_to(path))
                 .collect(),
             ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
-                vec![utils::get_relative_path(
-                    base_path,
-                    &app.visible_entries.get_selected().unwrap().borrow().path(),
-                )
-                .unwrap()]
+                vec![profile
+                    .rel_path_to(&app.visible_entries.get_selected().unwrap().borrow().path())]
             }
             ConfirmationContext::ProfileDeletion => {
-                vec![app.profiles.profiles.get_selected().unwrap().name.clone()]
+                vec![app.profiles.inner.get_selected().unwrap().name().to_owned()]
             }
         };
 

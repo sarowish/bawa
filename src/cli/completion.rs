@@ -1,6 +1,6 @@
 use crate::{
     config::SKIP_CONFIG,
-    profile::{get_profiles, Profiles},
+    profile::{get_profiles, Profile, Profiles},
     search::FuzzyFinder,
 };
 use clap_complete::CompletionCandidate;
@@ -16,7 +16,7 @@ pub fn profile_completer(current: &OsStr) -> Vec<CompletionCandidate> {
 
     profiles
         .iter()
-        .map(|profile| profile.name.clone())
+        .map(Profile::name)
         .filter(|name| name.to_lowercase().starts_with(current))
         .map(|name| CompletionCandidate::new(name).help(Some("Profile".into())))
         .collect()

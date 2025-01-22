@@ -18,7 +18,6 @@ use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
 use ratatui::widgets::ListState;
 use std::{
-    cell::RefCell,
     collections::HashMap,
     path::{self, Path, PathBuf},
     rc::Rc,
@@ -73,7 +72,7 @@ impl App {
         self.watcher.watch_profiles(&utils::get_data_dir()?);
 
         if let Some(profile) = self.profiles.get_profile() {
-            self.watcher.watch_profile_entries(&profile.path);
+            self.watcher.watch_profile_entries(profile.path());
         }
 
         loop {
@@ -114,7 +113,7 @@ impl App {
 
         if let Some(profile) = self.profiles.get_profile() {
             if let (true, EventKind::Rename(ref new_path)) =
-                (profile.path == event.path, &event.kind)
+                (profile.path() == event.path, &event.kind)
             {
                 self.watcher.watch_profile_entries(new_path);
             }
@@ -127,7 +126,7 @@ impl App {
 
     fn load_entries(&mut self) {
         if let Some(profile) = self.profiles.get_profile() {
-            self.visible_entries = StatefulList::with_items(profile.get_entries(false));
+            self.visible_entries = StatefulList::with_items(profile.folder.descendants(false));
         }
     }
 
@@ -139,14 +138,14 @@ impl App {
         let old_path = self
             .profiles
             .get_profile()
-            .map(|profile| profile.path.clone());
+            .map(|profile| profile.path().to_owned());
 
         if let Ok(selected_new_profile) = self.profiles.select_profile() {
             if selected_new_profile {
                 self.load_entries();
                 self.auto_mark_save_file();
                 self.watcher
-                    .watch_profile_entries(&self.profiles.get_profile().unwrap().path);
+                    .watch_profile_entries(self.profiles.get_profile().unwrap().path());
 
                 if let Some(path) = old_path {
                     self.watcher.unwatch(&path).unwrap();
@@ -183,7 +182,7 @@ impl App {
             ConfirmationContext::Replacing if matches!(self.visible_entries.get_selected(), Some(entry) if entry.borrow().is_folder()) =>
                 {}
             ConfirmationContext::ProfileDeletion
-                if self.profiles.profiles.state.selected().is_none() => {}
+                if self.profiles.inner.state.selected().is_none() => {}
             _ => self.mode = Mode::Confirmation(context),
         }
     }
@@ -233,7 +232,7 @@ impl App {
                 .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
         {
             let profile = self.profiles.get_mut_profile().unwrap();
-            let path = profile.path.join(file_name);
+            let path = profile.abs_path_to(&file_name);
             utils::check_for_dup(&path)?;
             std::fs::create_dir(&path)?;
         } else {
@@ -313,11 +312,11 @@ impl App {
                 .get_selected()
                 .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
         {
-            self.profiles.get_profile().unwrap().path.clone()
+            self.profiles.get_profile().unwrap().path()
         } else {
             let selected_idx = self.visible_entries.state.selected().unwrap();
             let idx = self.find_context(selected_idx).unwrap();
-            self.visible_entries.items[idx].borrow().path()
+            &self.visible_entries.items[idx].borrow().path()
         };
 
         let mut fail = false;
@@ -348,15 +347,12 @@ impl App {
     }
 
     fn find_parent(&self, mut idx: usize) -> Option<usize> {
-        let depth = if let Some(entry) = self.visible_entries.items.get(idx) {
-            entry.borrow().depth()
-        } else {
-            return None;
-        };
-
-        if depth == 0 {
-            return None;
-        }
+        let depth = self
+            .visible_entries
+            .items
+            .get(idx)
+            .map(|entry| entry.borrow().depth())
+            .filter(|depth| *depth > 0)?;
 
         idx -= 1;
 
@@ -385,7 +381,7 @@ impl App {
                 *is_fold_opened = true;
             }
 
-            entry.borrow().children(false)
+            entry.borrow().descendants(false)
         } else {
             return false;
         };
@@ -398,7 +394,7 @@ impl App {
 
     fn close_fold_at_index(&mut self, mut idx: usize) -> bool {
         let children_len = if let Some(entry) = self.visible_entries.items.get(idx) {
-            let children_len = entry.borrow().children_len();
+            let children_len = entry.borrow().descendants_len();
 
             if let Entry::Folder {
                 ref mut is_fold_opened,
@@ -439,7 +435,7 @@ impl App {
                     .get(idx)
                     .unwrap()
                     .borrow()
-                    .children_len();
+                    .descendants_len();
             }
 
             idx += 1;
@@ -467,7 +463,7 @@ impl App {
                     .get(idx)
                     .unwrap()
                     .borrow()
-                    .children_len();
+                    .descendants_len();
             }
 
             self.close_fold_at_index(idx);
@@ -615,7 +611,7 @@ impl App {
     fn get_index_of_active_list(&mut self) -> Option<usize> {
         match self.mode {
             Mode::Normal => self.visible_entries.state.selected(),
-            Mode::ProfileSelection => self.profiles.profiles.state.selected(),
+            Mode::ProfileSelection => self.profiles.inner.state.selected(),
             _ => unreachable!(),
         }
     }
@@ -630,7 +626,7 @@ impl App {
                 self.visible_entries.state.select(new_idx);
                 self.auto_mark_save_file();
             }
-            Mode::ProfileSelection => self.profiles.profiles.state.select(new_idx),
+            Mode::ProfileSelection => self.profiles.inner.state.select(new_idx),
             _ => unreachable!(),
         };
     }
@@ -640,13 +636,8 @@ impl App {
 
         let profile = self.profiles.get_mut_profile().unwrap();
 
-        self.message.set_message_with_timeout(
-            &format!(
-                "Loaded {}",
-                utils::get_relative_path(&profile.path, path).unwrap()
-            ),
-            5,
-        );
+        self.message
+            .set_message_with_timeout(&format!("Loaded {}", profile.rel_path_to(path)), 5);
 
         if mark_as_active {
             profile.update_active_save_file(path)?;
@@ -704,7 +695,7 @@ impl App {
                 .is_none_or(|entry| (entry.borrow().depth() == 0 && entry.borrow().is_file()))
         {
             let profile = self.profiles.get_mut_profile().unwrap();
-            let mut path = profile.path.join(save_file_path.file_name().unwrap());
+            let mut path = profile.abs_path_to(save_file_path.file_name().unwrap());
             utils::validate_name(&mut path);
 
             if let Err(e) = std::fs::copy(&save_file_path, &path) {
@@ -759,10 +750,10 @@ impl App {
                 .collect::<Vec<String>>(),
             Mode::ProfileSelection => &self
                 .profiles
-                .profiles
+                .inner
                 .items
                 .iter()
-                .map(|profile| profile.name.clone())
+                .map(|profile| profile.name().to_owned())
                 .collect::<Vec<String>>(),
             _ => unreachable!(),
         };
@@ -861,13 +852,13 @@ impl HandleFileSystemEvent for App {
             return Ok(());
         };
 
-        let path_to_entry = profile.find_entry(path.parent().unwrap());
+        let path_to_entry = profile.folder.find_entry(path.parent().unwrap());
         let depth = path_to_entry.len();
 
-        let new_entry = Rc::new(RefCell::new(Entry::new(path.to_path_buf(), depth)?));
+        let new_entry = Entry::new_rc(path.to_path_buf(), depth)?;
 
         if depth == 0 {
-            profile.entries.push(new_entry.clone());
+            profile.folder.insert_to_folder(new_entry.clone());
             self.visible_entries.items.push(new_entry);
         } else {
             let parent = &path_to_entry.last().unwrap().1;
@@ -908,7 +899,7 @@ impl HandleFileSystemEvent for App {
         };
 
         if !moved {
-            let path_to_entry = profile.find_entry(path);
+            let path_to_entry = profile.folder.find_entry(path);
             let child = &path_to_entry.last().unwrap().1;
             child.borrow_mut().rename(new_path);
         }
@@ -925,17 +916,17 @@ impl HandleFileSystemEvent for App {
             return Ok(());
         };
 
-        if matches!(profile.get_active_save_file(), Some(selected_save_file) if selected_save_file == path)
+        if matches!(profile.get_active_save_file(), Some(active_save_file) if active_save_file == path)
         {
             profile.delete_active_save()?;
         }
 
         self.marked_entries.remove(path);
 
-        let mut path_to_entry = profile.find_entry(path);
+        let mut path_to_entry = profile.folder.find_entry(path);
 
         if path_to_entry.len() == 1 {
-            profile.entries.remove(path_to_entry[0].0);
+            profile.folder.entries_mut().remove(path_to_entry[0].0);
         } else {
             let (parent, child) = path_to_entry
                 .last_chunk_mut::<2>()

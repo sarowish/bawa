@@ -1,5 +1,5 @@
 use crate::app::StatefulList;
-use crate::entry::{find_entry, Entry, RcEntry};
+use crate::entry::Entry;
 use crate::utils;
 use crate::watcher::HandleFileSystemEvent;
 use anyhow::{Context, Result};
@@ -37,31 +37,47 @@ pub fn get_active_profile() -> Result<String> {
 
 #[derive(Debug)]
 pub struct Profile {
-    pub name: String,
-    pub path: PathBuf,
-    pub entries: Vec<RcEntry>,
-    pub active_save_file: Option<PathBuf>,
+    pub folder: Entry,
+    active_save_file: Option<PathBuf>,
 }
 
 impl Profile {
     pub fn new(path: PathBuf) -> Self {
         Self {
-            entries: Vec::new(),
-            name: path.file_name().unwrap().to_string_lossy().to_string(),
-            path,
+            folder: Entry::Folder {
+                name: path.file_name().unwrap().to_string_lossy().to_string(),
+                path,
+                entries: Vec::new(),
+                is_fold_opened: true,
+                depth: 0,
+            },
             active_save_file: None,
         }
     }
 
+    pub fn name(&self) -> &str {
+        match &self.folder {
+            Entry::Folder { name, .. } => name,
+            Entry::File { .. } => unreachable!(),
+        }
+    }
+
+    pub fn path(&self) -> &Path {
+        match &self.folder {
+            Entry::Folder { path, .. } => path,
+            Entry::File { .. } => unreachable!(),
+        }
+    }
+
     pub fn load_entries(&mut self) -> Result<()> {
-        self.entries = Entry::entries_from_path(&self.path, 0)?;
+        *self.folder.entries_mut() = Entry::entries_from_path(self.path(), 0)?;
         self.read_active_save_file();
 
         Ok(())
     }
 
     fn get_active_save_path(&self) -> PathBuf {
-        self.path.join("active_save_file")
+        self.abs_path_to("active_save_file")
     }
 
     pub fn get_active_save_file(&self) -> Option<PathBuf> {
@@ -88,50 +104,33 @@ impl Profile {
     fn write_active_save_file(&self, path: &Path) -> Result<()> {
         let file_path = self.get_active_save_path();
         let mut file = File::create(file_path)?;
-        Ok(writeln!(
-            file,
-            "{}",
-            utils::get_relative_path(&self.path, path)?
-        )?)
+        Ok(writeln!(file, "{}", self.rel_path_to(path))?)
     }
 
     pub fn read_active_save_file(&mut self) {
-        if let Ok(path) =
-            fs::read_to_string(self.get_active_save_path()).map(|path| self.path.join(path.trim()))
+        if let Ok(path) = fs::read_to_string(self.get_active_save_path())
+            .map(|path| self.abs_path_to(path.trim()))
         {
             self.active_save_file = Some(path);
         }
     }
 
-    pub fn find_entry(&self, entry_path: &Path) -> Vec<(usize, RcEntry)> {
-        let components = utils::get_relative_path_with_components(&self.path, entry_path).unwrap();
-
-        if components.is_empty() {
-            Vec::new()
-        } else {
-            find_entry(&self.entries, &components)
-        }
+    pub fn abs_path_to<A: AsRef<Path>>(&self, path: A) -> PathBuf {
+        self.path().join(path)
     }
 
-    pub fn get_entries(&self, flatten: bool) -> Vec<RcEntry> {
-        let mut entries = Vec::new();
-
-        for entry in &self.entries {
-            entries.push(entry.clone());
-            entries.append(&mut entry.borrow().children(flatten));
-        }
-
-        entries
+    pub fn rel_path_to(&self, entry_path: &Path) -> String {
+        utils::get_relative_path(self.path(), entry_path).unwrap()
     }
 
     pub fn get_file_rel_paths(&self, include_folders: bool) -> Vec<String> {
         let mut paths = Vec::new();
 
-        for entry in self.get_entries(true) {
+        for entry in self.folder.descendants(true) {
             let entry = entry.borrow();
             let is_file = entry.is_file();
             if include_folders || is_file {
-                let mut path = utils::get_relative_path(&self.path, &entry.path()).unwrap();
+                let mut path = self.rel_path_to(&entry.path());
 
                 if !is_file {
                     path.push(MAIN_SEPARATOR);
@@ -147,24 +146,24 @@ impl Profile {
 
 impl Display for Profile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "{}", self.name())
     }
 }
 
 #[derive(Debug)]
 pub struct Profiles {
-    pub profiles: StatefulList<Profile>,
+    pub inner: StatefulList<Profile>,
     pub active_profile: Option<usize>,
 }
 
 impl Profiles {
     pub fn new() -> Result<Self> {
-        let selected_profile = get_active_profile();
+        let active_profile_name = get_active_profile();
         let mut profiles = get_profiles()?;
         let mut active_profile = None;
 
-        if let Ok(name) = selected_profile {
-            active_profile = profiles.iter().position(|profile| profile.name == name);
+        if let Ok(name) = active_profile_name {
+            active_profile = profiles.iter().position(|profile| profile.name() == name);
 
             if let Some(idx) = active_profile {
                 profiles[idx].load_entries()?;
@@ -172,7 +171,7 @@ impl Profiles {
         }
 
         Ok(Self {
-            profiles: StatefulList::with_items(profiles),
+            inner: StatefulList::with_items(profiles),
             active_profile,
         })
     }
@@ -194,18 +193,18 @@ impl Profiles {
             return Err(anyhow::anyhow!("Name can't be empty."));
         }
 
-        if let Some(profile) = self.profiles.get_selected() {
-            let mut new_path = profile.path.clone();
+        if let Some(profile) = self.inner.get_selected() {
+            let mut new_path = profile.path().to_owned();
             new_path.set_file_name(new_name);
-            utils::rename(&profile.path, &new_path)?;
+            utils::rename(profile.path(), &new_path)?;
         }
 
         Ok(())
     }
 
     pub fn delete_selected_profile(&mut self) -> Result<()> {
-        if let Some(profile) = self.profiles.get_selected() {
-            std::fs::remove_dir_all(&profile.path)?;
+        if let Some(profile) = self.inner.get_selected() {
+            std::fs::remove_dir_all(profile.path())?;
         }
 
         Ok(())
@@ -213,17 +212,17 @@ impl Profiles {
 
     pub fn select_profile(&mut self) -> Result<bool> {
         if let Some(idx) = self.active_profile {
-            if matches!(self.profiles.state.selected(), Some(selected_idx) if idx == selected_idx) {
+            if matches!(self.inner.state.selected(), Some(selected_idx) if idx == selected_idx) {
                 return Ok(false);
             }
 
-            self.profiles.items[idx].entries.drain(..);
+            self.inner.items[idx].folder.entries_mut().drain(..);
         }
 
-        if let Some(profile) = self.profiles.get_mut_selected() {
+        if let Some(profile) = self.inner.get_mut_selected() {
             profile.load_entries()?;
-            update_active_profile(&profile.name)?;
-            self.active_profile = self.profiles.state.selected();
+            update_active_profile(profile.name())?;
+            self.active_profile = self.inner.state.selected();
             Ok(true)
         } else {
             Err(anyhow::anyhow!("There aren't any profiles to select"))
@@ -231,53 +230,45 @@ impl Profiles {
     }
 
     pub fn get_profile(&self) -> Option<&Profile> {
-        self.profiles.items.get(self.active_profile?)
+        self.inner.items.get(self.active_profile?)
     }
 
     pub fn get_mut_profile(&mut self) -> Option<&mut Profile> {
-        self.profiles.items.get_mut(self.active_profile?)
+        self.inner.items.get_mut(self.active_profile?)
     }
 }
 
 impl HandleFileSystemEvent for Profiles {
     fn on_create(&mut self, path: &Path) -> Result<()> {
-        self.profiles.items.push(Profile::new(path.to_path_buf()));
+        self.inner.items.push(Profile::new(path.to_path_buf()));
 
         Ok(())
     }
 
     fn on_rename(&mut self, path: &Path, new_path: &Path) -> Result<()> {
-        let items = &self.profiles.items;
-        let Some(idx) = items.iter().position(|profile| profile.path == path) else {
+        let profiles = &mut self.inner.items;
+        let Some(idx) = profiles.iter().position(|profile| profile.path() == path) else {
             return Ok(());
         };
 
-        let profile = &mut self.profiles.items[idx];
+        let profile = &mut profiles[idx];
         let new_name = new_path.file_name().unwrap().to_string_lossy();
 
-        if matches!(get_active_profile(), Ok(selected_profile) if selected_profile  == profile.name)
-        {
+        if matches!(get_active_profile(), Ok(active_profile) if active_profile == profile.name()) {
             update_active_profile(&new_name)?;
         }
 
-        profile.name = new_name.to_string();
-        profile.path = new_path.to_path_buf();
-
         if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
-            for entry in &profile.entries {
-                let entry_name = entry.borrow().file_name();
-                *entry.borrow_mut().path_mut() = profile.path.join(entry_name);
-                entry.borrow_mut().update_children_path();
-            }
+            profile.folder.rename(new_path);
         }
 
         Ok(())
     }
 
     fn on_delete(&mut self, path: &Path) -> Result<()> {
-        let items = &self.profiles.items;
-        if let Some(idx) = items.iter().position(|profile| profile.path == path) {
-            self.profiles.items.remove(idx);
+        let profiles = &self.inner.items;
+        if let Some(idx) = profiles.iter().position(|profile| profile.path() == path) {
+            self.inner.items.remove(idx);
 
             if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
                 self.active_profile = None;
