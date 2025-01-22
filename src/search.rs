@@ -118,7 +118,7 @@ impl Display for Entry {
         if self.profile_name.is_empty() {
             write!(f, "{}", self.path)
         } else {
-            write!(f, "{}    {}", self.profile_name, self.path)
+            write!(f, "{:20}  {}", self.profile_name.to_string(), self.path)
         }
     }
 }
