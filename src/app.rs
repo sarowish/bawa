@@ -862,14 +862,13 @@ impl HandleFileSystemEvent for App {
             self.visible_entries.items.push(new_entry);
         } else {
             let parent = &path_to_entry.last().unwrap().1;
-            let is_fold_opened = parent.borrow().is_fold_opened();
-            if let Some(false) = is_fold_opened {
-                parent.borrow_mut().insert_to_folder(new_entry);
-                return Ok(());
-            }
+            let folds_opened = path_to_entry
+                .iter()
+                .all(|(_, entry)| entry.borrow().is_fold_opened().unwrap_or_default());
 
-            let visible_entries = &self.visible_entries.items;
-            if let Some(idx) = visible_entries
+            if !folds_opened {
+                parent.borrow_mut().insert_to_folder(new_entry);
+            } else if let Some(idx) = (self.visible_entries.items)
                 .iter()
                 .position(|entry| Rc::ptr_eq(entry, parent))
             {
