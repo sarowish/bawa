@@ -39,7 +39,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     ) {
         draw_list_with_help(
             f,
-            "Profiles".to_string(),
+            "Profiles".to_owned(),
             &mut app.profiles.inner,
             &app.help.bindings.profile_selection,
         );
@@ -295,7 +295,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         Line::from(Span::raw(format!("{}{}", input.prompt, input.text)))
     } else if !app.message.is_empty() {
         Line::from(Span::styled(
-            app.message.to_string(),
+            app.message.to_owned(),
             match app.message.kind {
                 MessageKind::Info => Style::default(),
                 MessageKind::Error => THEME.error,

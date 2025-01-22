@@ -124,7 +124,7 @@ impl Entry {
     pub fn rename(&mut self, new_path: &Path) {
         match self {
             Entry::File { name, path, .. } | Entry::Folder { name, path, .. } => {
-                *path = new_path.to_path_buf();
+                new_path.clone_into(path);
                 *name = set_name_helper(path);
                 self.update_children_path();
             }
@@ -250,7 +250,7 @@ impl Entry {
                     None => " ",
                     _ => "  ",
                 }
-                .to_string(),
+                .to_owned(),
             ),
             Span::styled(
                 self.name(),

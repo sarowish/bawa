@@ -31,7 +31,7 @@ impl Message {
         self.token.cancel();
 
         if !message.is_empty() {
-            self.message = message.to_string();
+            message.clone_into(&mut self.message);
             self.kind = Kind::Info;
             self.token = CancellationToken::new();
         }

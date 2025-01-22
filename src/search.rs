@@ -21,7 +21,7 @@ impl Search {
     pub fn new(pattern: &str) -> Self {
         Self {
             matches: Vec::new(),
-            pattern: pattern.to_string().to_lowercase(),
+            pattern: pattern.to_lowercase(),
         }
     }
 
@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn fuzzy_unicode() {
-        let item = MatchedItem::new("türkçe".to_string(), None, &[1, 2]);
+        let item = MatchedItem::new("türkçe".to_owned(), None, &[1, 2]);
 
         assert_eq!(
             item.highlight_slices(),
@@ -214,14 +214,14 @@ mod tests {
 
     #[test]
     fn fuzzy_unicode2() {
-        let item = MatchedItem::new("türkçe".to_string(), None, &[0]);
+        let item = MatchedItem::new("türkçe".to_owned(), None, &[0]);
 
         assert_eq!(item.highlight_slices(), vec![("t", true), ("ürkçe", false)]);
     }
 
     #[test]
     fn fuzzy_postfix() {
-        let item = MatchedItem::new("some text".to_string(), None, &[6, 7, 8]);
+        let item = MatchedItem::new("some text".to_owned(), None, &[6, 7, 8]);
 
         assert_eq!(
             item.highlight_slices(),

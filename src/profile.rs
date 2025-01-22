@@ -32,7 +32,7 @@ pub fn update_active_profile(profile_name: &str) -> Result<()> {
 pub fn get_active_profile() -> Result<String> {
     Ok(fs::read_to_string(get_active_profile_file()?)?
         .trim()
-        .to_string())
+        .to_owned())
 }
 
 #[derive(Debug)]
@@ -96,7 +96,7 @@ impl Profile {
 
         self.write_active_save_file(path)
             .context("Couldn't mark as active save file")?;
-        self.active_save_file = Some(path.to_path_buf());
+        self.active_save_file = Some(path.to_owned());
 
         Ok(())
     }
@@ -240,7 +240,7 @@ impl Profiles {
 
 impl HandleFileSystemEvent for Profiles {
     fn on_create(&mut self, path: &Path) -> Result<()> {
-        self.inner.items.push(Profile::new(path.to_path_buf()));
+        self.inner.items.push(Profile::new(path.to_owned()));
 
         Ok(())
     }

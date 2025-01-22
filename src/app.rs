@@ -855,7 +855,7 @@ impl HandleFileSystemEvent for App {
         let path_to_entry = profile.folder.find_entry(path.parent().unwrap());
         let depth = path_to_entry.len();
 
-        let new_entry = Entry::new_rc(path.to_path_buf(), depth)?;
+        let new_entry = Entry::new_rc(path.to_owned(), depth)?;
 
         if depth == 0 {
             profile.folder.insert_to_folder(new_entry.clone());
@@ -885,7 +885,7 @@ impl HandleFileSystemEvent for App {
         let moved = path.parent() != new_path.parent();
 
         if let Some(entry) = self.marked_entries.remove(path) {
-            self.marked_entries.insert(new_path.to_path_buf(), entry);
+            self.marked_entries.insert(new_path.to_owned(), entry);
         }
 
         if moved {

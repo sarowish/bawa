@@ -87,7 +87,7 @@ impl Input {
     pub fn with_prompt(prompt: &str) -> Self {
         Self {
             text: String::new(),
-            prompt: prompt.to_string(),
+            prompt: prompt.to_owned(),
             idx: 0,
             cursor_position: 0,
             cursor_offset: prompt.len() as u16,
@@ -96,7 +96,7 @@ impl Input {
     }
 
     pub fn set_text(&mut self, text: &str) {
-        self.text = text.to_string();
+        text.clone_into(&mut self.text);
         self.idx = text.len();
         self.cursor_position = text.width() as u16;
     }

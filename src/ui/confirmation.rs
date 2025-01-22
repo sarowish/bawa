@@ -30,9 +30,9 @@ impl ConfirmationPrompt {
                 };
                 format!("Permanently delete {count} selected file{postfix}")
             }
-            ConfirmationContext::Replacing => "Overwrite the selected file".to_string(),
+            ConfirmationContext::Replacing => "Overwrite the selected file".to_owned(),
             ConfirmationContext::ProfileDeletion => {
-                "Permanently delete the selected profile".to_string()
+                "Permanently delete the selected profile".to_owned()
             }
         };
 
@@ -53,10 +53,7 @@ impl ConfirmationPrompt {
             }
         };
 
-        Self {
-            title: title.to_string(),
-            body,
-        }
+        Self { title, body }
     }
 }
 

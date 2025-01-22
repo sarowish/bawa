@@ -108,8 +108,7 @@ impl FileSystemEvent {
     #[cfg(windows)]
     fn from_modify(event: NotifyEvent, from: &Path) -> Self {
         let kind = Kind::Rename(event.paths[0].clone());
-        let path = from.to_path_buf();
-        let context = if utils::get_relative_path(&utils::get_data_dir().unwrap(), &path)
+        let context = if utils::get_relative_path(&utils::get_data_dir().unwrap(), from)
             .unwrap()
             .contains(MAIN_SEPARATOR)
         {
@@ -121,7 +120,7 @@ impl FileSystemEvent {
         Self {
             context,
             kind,
-            path,
+            path: from.to_owned(),
         }
     }
 }
