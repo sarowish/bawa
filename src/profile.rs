@@ -45,7 +45,6 @@ impl Profile {
     pub fn new(path: PathBuf) -> Self {
         Self {
             folder: Entry::Folder {
-                name: path.file_name().unwrap().to_string_lossy().to_string(),
                 path,
                 entries: Vec::new(),
                 is_fold_opened: true,
@@ -55,11 +54,8 @@ impl Profile {
         }
     }
 
-    pub fn name(&self) -> &str {
-        match &self.folder {
-            Entry::Folder { name, .. } => name,
-            Entry::File { .. } => unreachable!(),
-        }
+    pub fn name(&self) -> std::borrow::Cow<'_, str> {
+        self.folder.name().to_string_lossy()
     }
 
     pub fn path(&self) -> &Path {
@@ -130,7 +126,7 @@ impl Profile {
             let entry = entry.borrow();
             let is_file = entry.is_file();
             if include_folders || is_file {
-                let mut path = self.rel_path_to(&entry.path());
+                let mut path = self.rel_path_to(entry.path());
 
                 if !is_file {
                     path.push(MAIN_SEPARATOR);
@@ -221,7 +217,7 @@ impl Profiles {
 
         if let Some(profile) = self.inner.get_mut_selected() {
             profile.load_entries()?;
-            update_active_profile(profile.name())?;
+            update_active_profile(&profile.name())?;
             self.active_profile = self.inner.state.selected();
             Ok(true)
         } else {

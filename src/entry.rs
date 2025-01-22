@@ -7,7 +7,9 @@ use ratatui::{
 use std::{
     cell::RefCell,
     collections::HashMap,
-    path::{Path, PathBuf},
+    ffi::OsStr,
+    fmt::Display,
+    path::{self, Path, PathBuf},
     rc::Rc,
 };
 
@@ -16,12 +18,10 @@ pub type RcEntry = Rc<RefCell<Entry>>;
 #[derive(Debug)]
 pub enum Entry {
     File {
-        name: String,
         path: PathBuf,
         depth: usize,
     },
     Folder {
-        name: String,
         path: PathBuf,
         entries: Vec<RcEntry>,
         is_fold_opened: bool,
@@ -31,14 +31,11 @@ pub enum Entry {
 
 impl Entry {
     pub fn new(path: PathBuf, depth: usize) -> Result<Self> {
-        let name = set_name_helper(&path);
-
         Ok(if path.is_file() {
-            Self::File { name, path, depth }
+            Self::File { path, depth }
         } else {
             Self::Folder {
                 entries: Self::entries_from_path(&path, depth + 1)?,
-                name,
                 path,
                 is_fold_opened: false,
                 depth,
@@ -123,85 +120,62 @@ impl Entry {
 
     pub fn rename(&mut self, new_path: &Path) {
         match self {
-            Entry::File { name, path, .. } | Entry::Folder { name, path, .. } => {
+            Entry::File { path, .. } | Entry::Folder { path, .. } => {
                 new_path.clone_into(path);
-                *name = set_name_helper(path);
                 self.update_children_path();
             }
         }
     }
 
     pub fn delete(&self) -> Result<()> {
-        match self {
-            Entry::File { path, .. } => std::fs::remove_file(path)?,
-            Entry::Folder { path, .. } => std::fs::remove_dir_all(path)?,
-        }
-
-        Ok(())
+        Ok(match self {
+            Entry::File { path, .. } => std::fs::remove_file(path),
+            Entry::Folder { path, .. } => std::fs::remove_dir_all(path),
+        }?)
     }
 
     pub fn update_children_path(&mut self) {
-        if self.is_file() {
-            return;
-        }
-
-        let path = self.path();
-
-        for child in self.entries_mut() {
-            let child_name = child.borrow().file_name();
-            *child.borrow_mut().path_mut() = path.join(child_name);
-            child.borrow_mut().update_children_path();
+        if let Entry::Folder { path, entries, .. } = self {
+            for child in entries {
+                let mut child = child.borrow_mut();
+                *child.path_mut() = path.join(child.name());
+                child.update_children_path();
+            }
         }
     }
 
     pub fn find_entry(&self, entry_path: &Path) -> Vec<(usize, RcEntry)> {
-        let components =
-            utils::get_relative_path_with_components(&self.path(), entry_path).unwrap();
-
-        (!components.is_empty())
-            .then(|| self.find_entry_helper(&components))
-            .unwrap_or_default()
+        let components = utils::get_relative_path_components(self.path(), entry_path).unwrap();
+        self.find_entry_helper(components)
     }
 
-    fn find_entry_helper(&self, components: &[String]) -> Vec<(usize, RcEntry)> {
-        let entries = self.entries();
+    fn find_entry_helper(&self, mut components: path::Iter) -> Vec<(usize, RcEntry)> {
         let mut found_entries = Vec::new();
-        let component = &components[0];
 
-        let idx = self
-            .entries()
-            .iter()
-            .position(|entry| entry.borrow().file_name() == *component)
-            .unwrap();
+        if let Some(component) = components.next() {
+            let entries = self.entries();
 
-        found_entries.push((idx, entries[idx].clone()));
+            let idx = entries
+                .iter()
+                .position(|entry| entry.borrow().name() == component)
+                .unwrap();
 
-        if components.len() != 1 {
-            found_entries.append(&mut entries[idx].borrow().find_entry_helper(&components[1..]));
+            found_entries.push((idx, entries[idx].clone()));
+            found_entries.append(&mut entries[idx].borrow().find_entry_helper(components));
         }
 
         found_entries
     }
 
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &OsStr {
         match self {
-            Entry::File { name, .. } | Entry::Folder { name, .. } => name,
+            Entry::File { path, .. } | Entry::Folder { path, .. } => path.file_name().unwrap(),
         }
-        .clone()
     }
 
-    pub fn file_name(&self) -> String {
+    pub fn path(&self) -> &Path {
         match self {
-            Entry::File { path, .. } | Entry::Folder { path, .. } => {
-                path.file_name().unwrap().to_string_lossy().to_string()
-            }
-        }
-        .clone()
-    }
-
-    pub fn path(&self) -> PathBuf {
-        match self {
-            Entry::File { path, .. } | Entry::Folder { path, .. } => path.clone(),
+            Entry::File { path, .. } | Entry::Folder { path, .. } => path,
         }
     }
 
@@ -253,7 +227,7 @@ impl Entry {
                 .to_owned(),
             ),
             Span::styled(
-                self.name(),
+                self.to_string(),
                 if selected {
                     THEME.marked
                 } else {
@@ -279,14 +253,14 @@ pub fn entries_to_spans<'a>(
         .windows(2)
         .map(|pair| {
             let entry = pair[0].borrow();
-            let selected = marked_entries.contains_key(&entry.path());
+            let selected = marked_entries.contains_key(entry.path());
             let active = active_save_file.is_some_and(|active_path| active_path == entry.path());
             entry.to_spans(entry.depth() > pair[1].borrow().depth(), selected, active)
         })
         .collect();
 
     if let Some(last_entry) = entries.last().map(|entry| entry.borrow()) {
-        let selected = marked_entries.contains_key(&last_entry.path());
+        let selected = marked_entries.contains_key(last_entry.path());
         let active = active_save_file.is_some_and(|active_path| active_path == last_entry.path());
         items.push(last_entry.to_spans(last_entry.depth() != 0, selected, active));
     }
@@ -294,12 +268,16 @@ pub fn entries_to_spans<'a>(
     items
 }
 
-fn set_name_helper(path: &Path) -> String {
-    let name = if OPTIONS.hide_extensions && path.is_file() {
-        path.file_stem()
-    } else {
-        path.file_name()
-    };
+impl Display for Entry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let path = self.path();
+        let name = if OPTIONS.hide_extensions && self.is_file() {
+            path.file_stem()
+        } else {
+            path.file_name()
+        }
+        .unwrap();
 
-    name.unwrap().to_string_lossy().to_string()
+        f.write_str(&name.to_string_lossy())
+    }
 }

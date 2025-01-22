@@ -259,7 +259,7 @@ impl App {
             return;
         };
 
-        let mut file_name = entry.borrow().file_name();
+        let mut file_name = entry.borrow().name().to_string_lossy().into_owned();
 
         if let Some(empty_opt) = &OPTIONS.rename.empty {
             if let options::RenameEmpty::All = empty_opt {
@@ -291,18 +291,17 @@ impl App {
 
     pub fn rename_selected_entry(&mut self) -> Result<()> {
         let new_name = self.extract_input();
-        let entry = self.visible_entries.get_selected().unwrap();
 
         if new_name.is_empty() {
             return Err(anyhow::anyhow!("Name can't be empty."));
         }
 
-        let old_path = entry.borrow().path();
-
-        let mut new_path = old_path.clone();
+        let entry = self.visible_entries.get_selected().unwrap().borrow();
+        let old_path = entry.path();
+        let mut new_path = old_path.to_owned();
         new_path.set_file_name(new_name);
 
-        utils::rename(&old_path, &new_path)
+        utils::rename(old_path, &new_path)
     }
 
     pub fn move_entries(&mut self, top_level: bool) {
@@ -316,13 +315,13 @@ impl App {
         } else {
             let selected_idx = self.visible_entries.state.selected().unwrap();
             let idx = self.find_context(selected_idx).unwrap();
-            &self.visible_entries.items[idx].borrow().path()
+            &self.visible_entries.items[idx].borrow().path().to_owned()
         };
 
         let mut fail = false;
 
         for (_, entry) in self.marked_entries.drain() {
-            let new_path = base_path.join(entry.borrow().file_name());
+            let new_path = base_path.join(entry.borrow().name());
             if utils::check_for_dup(&new_path).is_err()
                 || std::fs::rename(entry.borrow().path(), new_path).is_err()
             {
@@ -649,7 +648,7 @@ impl App {
     pub fn load_selected_save_file(&mut self) {
         if let Some(entry) = self.visible_entries.get_selected() {
             if !entry.borrow().is_folder() {
-                let path = entry.borrow().path();
+                let path = entry.borrow().path().to_owned();
                 if let Err(e) = self.load_save_file(&path, true) {
                     self.message.set_error(&e);
                 }
@@ -746,14 +745,14 @@ impl App {
                 .visible_entries
                 .items
                 .iter()
-                .map(|entry| entry.borrow().name())
+                .map(|entry| entry.borrow().to_string())
                 .collect::<Vec<String>>(),
             Mode::ProfileSelection => &self
                 .profiles
                 .inner
                 .items
                 .iter()
-                .map(|profile| profile.name().to_owned())
+                .map(ToString::to_string)
                 .collect::<Vec<String>>(),
             _ => unreachable!(),
         };
@@ -817,7 +816,7 @@ impl App {
 
         for component in components {
             while let Some(entry) = self.visible_entries.items.get(idx) {
-                if entry.borrow().file_name() == component {
+                if entry.borrow().name() == component {
                     if entry.borrow().is_file() {
                         self.visible_entries.state.select(Some(idx));
                         self.auto_mark_save_file();
@@ -836,10 +835,12 @@ impl App {
 
     pub fn mark_entry(&mut self) {
         if let Some(entry) = self.visible_entries.get_selected() {
-            let path = entry.borrow().path();
-            if self.marked_entries.remove(&path).is_none() {
-                self.marked_entries.insert(path, entry.clone());
+            let entry_ref = entry.borrow();
+            let path = entry_ref.path();
+            if self.marked_entries.remove(path).is_none() {
+                self.marked_entries.insert(path.to_owned(), entry.clone());
             }
+            drop(entry_ref);
 
             self.visible_entries.next();
         };

@@ -46,10 +46,14 @@ impl ConfirmationPrompt {
                 .collect(),
             ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
                 vec![profile
-                    .rel_path_to(&app.visible_entries.get_selected().unwrap().borrow().path())]
+                    .rel_path_to(app.visible_entries.get_selected().unwrap().borrow().path())]
             }
             ConfirmationContext::ProfileDeletion => {
-                vec![app.profiles.inner.get_selected().unwrap().name().to_owned()]
+                vec![(app.profiles.inner)
+                    .get_selected()
+                    .unwrap()
+                    .name()
+                    .into_owned()]
             }
         };
 

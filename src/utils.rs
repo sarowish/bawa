@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use std::{
     fs,
     io::Write,
-    path::{Path, PathBuf},
+    path::{self, Path, PathBuf},
 };
 
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
@@ -98,18 +98,12 @@ pub fn get_save_file_paths() -> Result<Vec<PathBuf>> {
     Ok(paths)
 }
 
-pub fn get_relative_path_with_components(parent: &Path, child: &Path) -> Result<Vec<String>> {
-    Ok(child
-        .strip_prefix(parent)?
-        .iter()
-        .map(|name| name.to_string_lossy().to_string())
-        .collect::<Vec<String>>())
+pub fn get_relative_path_components<'a>(base: &Path, path: &'a Path) -> Result<path::Iter<'a>> {
+    Ok(path.strip_prefix(base)?.iter())
 }
 
-pub fn get_relative_path(parent: &Path, child: &Path) -> Result<String> {
-    let components = get_relative_path_with_components(parent, child)?;
-    let path = PathBuf::from_iter(components);
-    Ok(path.to_string_lossy().to_string())
+pub fn get_relative_path(base: &Path, path: &Path) -> Result<String> {
+    Ok(path.strip_prefix(base)?.to_string_lossy().into_owned())
 }
 
 pub fn write_atomic(path: &Path, content: &[u8]) -> Result<()> {

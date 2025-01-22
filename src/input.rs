@@ -328,7 +328,7 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
         match command {
             ProfileSelectionCommand::Create => app.take_input(Mode::ProfileCreation),
             ProfileSelectionCommand::Rename => {
-                let text = profiles.get_selected().unwrap().name().to_owned();
+                let text = profiles.get_selected().unwrap().name().into_owned();
                 app.take_input(Mode::ProfileRenaming);
                 app.footer_input.as_mut().unwrap().set_text(&text);
             }

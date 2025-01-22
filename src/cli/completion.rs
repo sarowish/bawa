@@ -18,7 +18,7 @@ pub fn profile_completer(current: &OsStr) -> Vec<CompletionCandidate> {
         .iter()
         .map(Profile::name)
         .filter(|name| name.to_lowercase().starts_with(current))
-        .map(|name| CompletionCandidate::new(name).help(Some("Profile".into())))
+        .map(|name| CompletionCandidate::new(name.into_owned()).help(Some("Profile".into())))
         .collect()
 }
 
