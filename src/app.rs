@@ -69,7 +69,7 @@ impl App {
         let mut term_events = EventStream::new();
 
         self.auto_mark_save_file();
-        self.watcher.watch_profiles(&utils::get_data_dir()?);
+        self.watcher.watch_profiles(&utils::get_state_dir()?);
 
         if let Some(profile) = self.profiles.get_profile() {
             self.watcher.watch_profile_entries(profile.path());

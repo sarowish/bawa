@@ -9,7 +9,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 
 pub fn get_profiles() -> Result<Vec<Profile>> {
-    Ok(utils::get_data_dir()?
+    Ok(utils::get_state_dir()?
         .read_dir()?
         .flatten()
         .filter(|dir_entry| dir_entry.file_type().unwrap().is_dir())
@@ -18,9 +18,9 @@ pub fn get_profiles() -> Result<Vec<Profile>> {
 }
 
 pub fn get_active_profile_file() -> Result<PathBuf> {
-    let data_dir = utils::get_data_dir()?;
+    let state_dir = utils::get_state_dir()?;
 
-    Ok(data_dir.join("active_profile"))
+    Ok(state_dir.join("active_profile"))
 }
 
 pub fn update_active_profile(profile_name: &str) -> Result<()> {
@@ -177,7 +177,7 @@ impl Profiles {
             return Err(anyhow::anyhow!("Name can't be empty."));
         }
 
-        let path = utils::get_data_dir()?.join(name);
+        let path = utils::get_state_dir()?.join(name);
         utils::check_for_dup(&path)?;
         std::fs::create_dir(&path)?;
 

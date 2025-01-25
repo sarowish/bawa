@@ -7,10 +7,16 @@ use std::{
 
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
-pub fn get_data_dir() -> Result<PathBuf> {
-    let path = match dirs::data_dir() {
+pub fn get_state_dir() -> Result<PathBuf> {
+    #[cfg(target_os = "linux")]
+    let state_dir = dirs::state_dir().or_else(dirs::data_dir);
+
+    #[cfg(not(target_os = "linux"))]
+    let state_dir = dirs::data_dir();
+
+    let path = match state_dir {
         Some(path) => path.join(PACKAGE_NAME),
-        None => bail!("Couldn't find data directory"),
+        None => bail!("Couldn't find state directory"),
     };
 
     if !path.exists() {
