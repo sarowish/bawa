@@ -9,7 +9,7 @@ use crate::{
     search::FuzzyFinder,
 };
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Margin, Rect},
+    layout::{Constraint, Layout, Margin, Rect},
     style::Style,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
@@ -18,14 +18,13 @@ use ratatui::{
 use std::fmt::Display;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
-    let (main_layout, footer) = if app.footer_input.is_some() || !app.message.is_empty() {
-        let chunks = Layout::default()
-            .constraints([Constraint::Min(1), Constraint::Length(1)])
-            .direction(Direction::Vertical)
-            .split(f.area());
-        (chunks[0], Some(chunks[1]))
+    let main_layout = if app.footer_input.is_some() || !app.message.is_empty() {
+        let [main, footer] =
+            Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).areas(f.area());
+        draw_footer(f, app, footer);
+        main
     } else {
-        (f.area(), None)
+        f.area()
     };
 
     draw_main(f, app, main_layout);
@@ -59,10 +58,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     if let Mode::Confirmation(context) = app.mode {
         draw_confirmation_window(f, app, context);
-    }
-
-    if let Some(footer) = footer {
-        draw_footer(f, app, footer);
     }
 }
 
@@ -100,10 +95,8 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
 pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {
     f.render_widget(Clear, area);
 
-    let (search_bar_area, results_area) = {
-        let chunks = Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).split(area);
-        (chunks[0], chunks[1])
-    };
+    let [search_bar_area, results_area] =
+        Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(area);
 
     let search_block = Block::default()
         .title(Span::styled("Search", THEME.title))
@@ -112,15 +105,12 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
 
     f.render_widget(&search_block, search_bar_area);
 
-    let (prompt_area, input_area, mut counter_area) = {
-        let chunks = Layout::horizontal([
-            Constraint::Length(fuzzy_finder.input.cursor_offset),
-            Constraint::Length(fuzzy_finder.input.text.len() as u16),
-            Constraint::Fill(1),
-        ])
-        .split(search_block.inner(search_bar_area));
-        (chunks[0], chunks[1], chunks[2])
-    };
+    let [prompt_area, input_area, mut counter_area] = Layout::horizontal([
+        Constraint::Length(fuzzy_finder.input.cursor_offset),
+        Constraint::Length(fuzzy_finder.input.text.len() as u16),
+        Constraint::Fill(1),
+    ])
+    .areas(search_block.inner(search_bar_area));
 
     let prompt = Paragraph::new(fuzzy_finder.input.prompt.clone()).style(THEME.fuzzy_prompt);
     f.render_widget(prompt, prompt_area);
@@ -264,14 +254,10 @@ fn draw_list_with_help<T: Display>(
         window,
     );
 
-    let (entry_area, help_area) = {
-        let chunks = Layout::default()
-            .constraints([Constraint::Min(1), Constraint::Length(help_text_height)])
-            .direction(Direction::Vertical)
+    let [entry_area, help_area] =
+        Layout::vertical([Constraint::Min(1), Constraint::Length(help_text_height)])
             .margin(1)
-            .split(window);
-        (chunks[0], chunks[1])
-    };
+            .areas(window);
 
     let mut help_widget = Paragraph::new(help_text);
     if window.width > 0 {

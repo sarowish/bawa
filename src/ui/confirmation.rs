@@ -1,7 +1,7 @@
 use super::popup::window_from_dimensions;
 use crate::{app::App, config::THEME, input::ConfirmationContext};
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Widget, Wrap},
@@ -75,11 +75,9 @@ impl Widget for ConfirmationPrompt {
             .title_alignment(Alignment::Center)
             .render(area, buf);
 
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(1)])
+        let [body_area, yes_no] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)])
             .margin(1)
-            .split(area);
+            .areas(area);
 
         let mut text = Paragraph::new(self.body.into_iter().map(Line::from).collect::<Vec<Line>>())
             .block(
@@ -88,17 +86,12 @@ impl Widget for ConfirmationPrompt {
                     .border_style(THEME.confirmation_border),
             );
 
-        if chunks[0].width > 0 {
+        if body_area.width > 0 {
             text = text.wrap(Wrap { trim: false });
         }
 
-        let (yes_area, no_area) = {
-            let chunks = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Fill(1), Constraint::Fill(1)])
-                .split(chunks[1]);
-            (chunks[0], chunks[1])
-        };
+        let [yes_area, no_area] =
+            Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(yes_no);
 
         let yes = Paragraph::new(Line::from(vec![
             Span::styled("Y", Style::new().green()),
@@ -111,7 +104,7 @@ impl Widget for ConfirmationPrompt {
         ]))
         .centered();
 
-        text.render(chunks[0], buf);
+        text.render(body_area, buf);
         yes.render(yes_area, buf);
         no.render(no_area, buf);
     }
