@@ -740,6 +740,10 @@ impl App {
     }
 
     fn run_search(&mut self) {
+        if self.search.pattern.is_empty() {
+            return;
+        }
+
         let list = match self.mode {
             Mode::Normal => &self
                 .visible_entries
