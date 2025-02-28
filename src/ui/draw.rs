@@ -2,11 +2,11 @@ use super::{confirmation::draw_confirmation_window, popup::window_from_dimension
 use crate::{
     app::{App, StatefulList},
     config::THEME,
-    entry::entries_to_spans,
     help::Help,
     input::{Mode, SearchContext},
     message::Kind as MessageKind,
     search::FuzzyFinder,
+    tree::widget::Tree,
 };
 use ratatui::{
     layout::{Constraint, Layout, Margin, Rect},
@@ -62,23 +62,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
-    let visible_entries = &mut app.visible_entries;
-
     let Some(profile) = app.profiles.get_profile() else {
         return;
     };
 
-    let entries = entries_to_spans(
-        &visible_entries.items,
-        &app.marked_entries,
-        profile.get_active_save_file().as_deref(),
-    )
-    .into_iter()
-    .map(Line::from)
-    .map(ListItem::new);
-
-    let entries = {
-        List::new(entries)
+    f.render_stateful_widget(
+        Tree::from(&profile.entries)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -87,9 +76,11 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
                     .title_style(THEME.title),
             )
             .highlight_style(THEME.selected)
-    };
-
-    f.render_stateful_widget(entries, area, &mut visible_entries.state);
+            .marked_style(THEME.marked)
+            .active_style(THEME.active),
+        area,
+        &mut app.tree_state,
+    );
 }
 
 pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {

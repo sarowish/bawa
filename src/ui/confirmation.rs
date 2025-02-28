@@ -23,10 +23,10 @@ impl ConfirmationPrompt {
     pub fn new(app: &App, context: ConfirmationContext) -> Self {
         let title = match context {
             ConfirmationContext::Deletion => {
-                let (count, postfix) = if app.marked_entries.is_empty() {
+                let (count, postfix) = if app.tree_state.marked.is_empty() {
                     (1, "")
                 } else {
-                    (app.marked_entries.len(), "s")
+                    (app.tree_state.marked.len(), "s")
                 };
                 format!("Permanently delete {count} selected file{postfix}")
             }
@@ -39,14 +39,14 @@ impl ConfirmationPrompt {
         let profile = app.profiles.get_profile().unwrap();
 
         let body = match context {
-            ConfirmationContext::Deletion if !app.marked_entries.is_empty() => app
-                .marked_entries
-                .keys()
-                .map(|path| profile.rel_path_to(path))
+            ConfirmationContext::Deletion if !app.tree_state.marked.is_empty() => app
+                .tree_state
+                .marked
+                .iter()
+                .map(|id| profile.rel_path_to(&profile.entries[*id].path))
                 .collect(),
             ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
-                vec![profile
-                    .rel_path_to(app.visible_entries.get_selected().unwrap().borrow().path())]
+                vec![profile.rel_path_to(&app.selected_entry().unwrap().path)]
             }
             ConfirmationContext::ProfileDeletion => {
                 vec![(app.profiles.inner)

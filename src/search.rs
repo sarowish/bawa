@@ -98,18 +98,6 @@ pub struct FuzzyFinder {
 }
 
 impl FuzzyFinder {
-    pub fn new() -> Self {
-        Self {
-            matcher: Matcher::new(Config::DEFAULT.match_paths()),
-            input: Input::with_prompt("> "),
-            pattern: Pattern::default(),
-            paths: Vec::new(),
-            matched_items: StatefulList::with_items(Vec::new()),
-            total_count: 0,
-            match_count: 0,
-        }
-    }
-
     pub fn fill_paths(&mut self, paths: &[String]) {
         self.paths = paths
             .iter()
@@ -197,10 +185,23 @@ impl FuzzyFinder {
     }
 }
 
+impl Default for FuzzyFinder {
+    fn default() -> Self {
+        Self {
+            matcher: Matcher::new(Config::DEFAULT.match_paths()),
+            input: Input::with_prompt("> "),
+            pattern: Pattern::default(),
+            paths: Vec::new(),
+            matched_items: StatefulList::with_items(Vec::new()),
+            total_count: 0,
+            match_count: 0,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::FuzzyFinder;
-    use crate::search::MatchedItem;
+    use super::{FuzzyFinder, MatchedItem};
 
     #[test]
     fn fuzzy_unicode() {

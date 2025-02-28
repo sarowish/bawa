@@ -1,0 +1,15 @@
+pub mod app;
+pub mod cli;
+mod commands;
+pub mod config;
+mod entry;
+mod event;
+mod help;
+mod input;
+mod message;
+mod profile;
+mod search;
+pub mod tree;
+pub mod ui;
+mod utils;
+mod watcher;

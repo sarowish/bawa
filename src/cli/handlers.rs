@@ -1,5 +1,10 @@
 use super::CLAP_ARGS;
-use crate::{app::App, entry::entries_to_spans, profile::Profiles, utils};
+use crate::{
+    app::App,
+    profile::Profiles,
+    tree::{widget::Tree, TreeState},
+    utils,
+};
 use anyhow::{Context, Result};
 use clap::{parser::ValueSource, ArgMatches};
 use crossterm::style::Stylize;
@@ -30,11 +35,16 @@ pub fn handle_list_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()> {
         return Err(anyhow::anyhow!("No Profile is selected"));
     };
 
-    for spans in entries_to_spans(
-        &app.visible_entries.items,
-        &Default::default(),
-        profile.get_active_save_file().as_deref(),
-    ) {
+    let mut tree_state = TreeState::default();
+    let entries = &profile.entries;
+
+    if let Some(path) = profile.get_active_save_file() {
+        tree_state.active = entries.iter_ids().find(|id| entries[*id].path == path);
+    }
+
+    for item in Tree::from(entries).items {
+        let spans = &item.content.iter().next().unwrap().spans;
+
         print!("{}", spans[0].content.dark_grey());
         print!("{}{}", spans[1], spans[2]);
         if let Some(span) = spans.get(3) {
@@ -87,10 +97,11 @@ fn handle_rename_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
 
 fn handle_delete_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     if let Some(path) = get_entry_path(args, app)? {
-        let profile = app.profiles.get_profile().unwrap();
-        let path_to_entry = profile.folder.find_entry(&path);
-        let entry = &path_to_entry.last().context("There is no such entry.")?.1;
-        entry.borrow().delete()?;
+        let entries = app.profiles.get_entries().unwrap();
+        let id = entries
+            .find_by_path(&path)
+            .context("There is no such entry.")?;
+        entries[id].delete()?;
     } else {
         std::process::exit(1)
     }

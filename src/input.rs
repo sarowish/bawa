@@ -313,7 +313,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
             Command::OpenFuzzyFinder => app.open_fuzzy_finder(),
             Command::MarkEntry => app.mark_entry(),
-            Command::Reset => app.marked_entries.clear(),
+            Command::Reset => app.tree_state.marked.clear(),
             Command::Quit => return true,
         }
     }

@@ -101,8 +101,8 @@ pub struct Bindings {
     pub profile_selection: [(String, &'static str); PROFILE_SELECTION_DESCRIPTIONS_LEN],
 }
 
-impl Bindings {
-    pub fn new() -> Self {
+impl Default for Bindings {
+    fn default() -> Self {
         let mut help = Self {
             general: [HELP_ENTRY; DESCRIPTIONS_LEN],
             profile_selection: [HELP_ENTRY; PROFILE_SELECTION_DESCRIPTIONS_LEN],
@@ -148,6 +148,7 @@ impl Deref for Bindings {
     }
 }
 
+#[derive(Default)]
 pub struct Help {
     pub bindings: Bindings,
     pub visible: bool,
@@ -156,15 +157,6 @@ pub struct Help {
 }
 
 impl Help {
-    pub fn new() -> Self {
-        Self {
-            bindings: Bindings::new(),
-            visible: false,
-            scroll: 0,
-            max_scroll: 0,
-        }
-    }
-
     pub fn toggle(&mut self) {
         self.visible = !self.visible;
     }
