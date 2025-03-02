@@ -115,6 +115,8 @@ impl Default for KeyBindings {
         insert_binding!(general, "r", Command::Rename);
         insert_binding!(general, "p", Command::MoveEntries);
         insert_binding!(general, "P", Command::MoveEntriesTopLevel);
+        insert_binding!(general, "M", Command::MoveUp);
+        insert_binding!(general, "m", Command::MoveDown);
         insert_binding!(general, "a", Command::OpenAllFolds);
         insert_binding!(general, "z", Command::CloseAllFolds);
         insert_binding!(general, "w", Command::SelectProfile);

@@ -3,11 +3,13 @@ use crate::entry::Entry;
 use crate::tree::{NodeId, Tree};
 use crate::utils;
 use crate::watcher::HandleFileSystemEvent;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+
+pub mod state;
 
 pub fn get_profiles() -> Result<Vec<Profile>> {
     Ok(utils::get_state_dir()?
@@ -19,9 +21,7 @@ pub fn get_profiles() -> Result<Vec<Profile>> {
 }
 
 pub fn get_active_profile_file() -> Result<PathBuf> {
-    let state_dir = utils::get_state_dir()?;
-
-    Ok(state_dir.join("active_profile"))
+    Ok(utils::get_state_dir()?.join("active_profile"))
 }
 
 pub fn update_active_profile(profile_name: &str) -> Result<()> {
@@ -39,7 +39,7 @@ pub fn get_active_profile() -> Result<String> {
 pub struct Profile {
     pub path: PathBuf,
     pub entries: Tree<Entry>,
-    active_save_file: Option<PathBuf>,
+    pub active_save_file: Option<PathBuf>,
 }
 
 impl Profile {
@@ -56,23 +56,27 @@ impl Profile {
     }
 
     pub fn load_entries(&mut self) -> Result<()> {
-        Entry::new(&self.path).add_to_tree(&mut self.entries)?;
-        self.read_active_save_file();
+        let state_file = self.abs_path_to("_state");
+        let root = Entry::new(&self.path);
+        if let Some(state) = fs::read(state_file)
+            .ok()
+            .and_then(|s| bincode::deserialize::<state::State>(&s).ok())
+        {
+            root.add_to_tree(&state.entries, &mut self.entries)?;
+            self.active_save_file = state.active_save_file.map(|rel| self.abs_path_to(rel));
+        } else {
+            root.add_to_tree(&[], &mut self.entries)?;
+        }
 
         Ok(())
     }
 
-    fn get_active_save_path(&self) -> PathBuf {
-        self.abs_path_to("active_save_file")
+    pub fn write_state(&self) -> Result<()> {
+        utils::write_atomic(&self.abs_path_to("_state"), &bincode::serialize(self)?)
     }
 
     pub fn get_active_save_file(&self) -> Option<PathBuf> {
         self.active_save_file.clone()
-    }
-
-    pub fn delete_active_save(&self) -> Result<()> {
-        let path = self.get_active_save_path();
-        Ok(fs::remove_file(path)?)
     }
 
     pub fn update_active_save_file(&mut self, path: &Path) -> Result<()> {
@@ -80,25 +84,17 @@ impl Profile {
             return Ok(());
         }
 
-        self.write_active_save_file(path)
-            .context("Couldn't mark as active save file")?;
         self.active_save_file = Some(path.to_owned());
+        self.write_state()?;
 
         Ok(())
     }
 
-    fn write_active_save_file(&self, path: &Path) -> Result<()> {
-        let file_path = self.get_active_save_path();
-        let mut file = File::create(file_path)?;
-        Ok(writeln!(file, "{}", self.rel_path_to(path))?)
-    }
+    pub fn reset_active_save_file(&mut self) -> Result<()> {
+        self.active_save_file = None;
+        self.write_state()?;
 
-    pub fn read_active_save_file(&mut self) {
-        if let Ok(path) = fs::read_to_string(self.get_active_save_path())
-            .map(|path| self.abs_path_to(path.trim()))
-        {
-            self.active_save_file = Some(path);
-        }
+        Ok(())
     }
 
     pub fn abs_path_to<A: AsRef<Path>>(&self, path: A) -> PathBuf {

@@ -304,6 +304,8 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::Rename => app.enter_renaming(),
             Command::MoveEntries => app.move_entries(false),
             Command::MoveEntriesTopLevel => app.move_entries(true),
+            Command::MoveUp => app.move_up(),
+            Command::MoveDown => app.move_down(),
             Command::OpenAllFolds => app.open_all_folds(),
             Command::CloseAllFolds => app.close_all_folds(),
             Command::SelectProfile => app.select_profile(),

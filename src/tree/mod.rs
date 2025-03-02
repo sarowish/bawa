@@ -532,3 +532,33 @@ impl<T> IndexMut<usize> for Tree<T> {
         &mut self.nodes[index]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tree::Tree;
+
+    #[test]
+    fn swap_nodes() {
+        let mut tree = Tree::default();
+
+        let r = tree.add_value("r");
+        let a = tree.add_value("a");
+        let b = tree.add_value("b");
+        let c = tree.add_value("c");
+
+        tree.append(r, a);
+        tree.append(r, b);
+        tree.append(r, c);
+
+        tree.detach(a);
+        tree.insert_after(c, a);
+
+        let mut iter = tree.children(r);
+
+        assert_eq!(iter.next(), Some(b));
+        assert_eq!(iter.next(), Some(c));
+        assert_eq!(iter.next(), Some(a));
+
+        assert_eq!(iter.next(), None);
+    }
+}

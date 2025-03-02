@@ -111,7 +111,7 @@ pub fn get_relative_path(base: &Path, path: &Path) -> Result<String> {
 pub fn write_atomic(path: &Path, content: &[u8]) -> Result<()> {
     let mut tmp = tempfile::Builder::new()
         .prefix(path.file_name().unwrap())
-        .tempfile_in(path.parent().unwrap())?;
+        .tempfile_in(get_state_dir()?)?;
     tmp.write_all(content)?;
 
     #[cfg(unix)]

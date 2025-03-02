@@ -333,6 +333,52 @@ impl App {
         }
     }
 
+    pub fn move_up(&mut self) {
+        let Some((id, profile)) = (self.tree_state.selected).zip(self.profiles.get_profile_mut())
+        else {
+            return;
+        };
+
+        let entries = &mut profile.entries;
+
+        if let Some(swap_with) = entries[id].previous_sibling() {
+            entries.detach(id);
+            entries.insert_before(swap_with, id);
+        } else if let Some(swap_with) = entries.following_siblings(id).last() {
+            entries.detach(id);
+            entries.insert_after(swap_with, id);
+        } else {
+            return;
+        };
+
+        if let Err(e) = profile.write_state() {
+            self.message.set_error(&e);
+        }
+    }
+
+    pub fn move_down(&mut self) {
+        let Some((id, profile)) = (self.tree_state.selected).zip(self.profiles.get_profile_mut())
+        else {
+            return;
+        };
+
+        let entries = &mut profile.entries;
+
+        if let Some(swap_with) = entries[id].next_sibling() {
+            entries.detach(id);
+            entries.insert_after(swap_with, id);
+        } else if let Some(swap_with) = entries.preceding_siblings(id).last() {
+            entries.detach(id);
+            entries.insert_before(swap_with, id);
+        } else {
+            return;
+        };
+
+        if let Err(e) = profile.write_state() {
+            self.message.set_error(&e);
+        }
+    }
+
     pub fn open_all_folds(&mut self) {
         if let Some(entries) = self.profiles.get_entries_mut() {
             entries.iter_nodes_mut().for_each(|node| {
@@ -713,7 +759,7 @@ impl HandleFileSystemEvent for App {
         };
 
         if matches!(profile.get_active_save_file(), Some(active_path) if active_path == path) {
-            profile.delete_active_save()?;
+            profile.reset_active_save_file()?;
         }
 
         if let Some(entry_id) = profile.entries.find_by_path(path) {

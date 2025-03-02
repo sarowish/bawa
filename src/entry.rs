@@ -22,13 +22,28 @@ impl Entry {
         }
     }
 
-    pub fn add_to_tree(self, tree: &mut Tree<Entry>) -> Result<NodeId> {
+    pub fn add_to_tree(
+        self,
+        entries: &[crate::profile::state::Entry],
+        tree: &mut Tree<Entry>,
+    ) -> Result<NodeId> {
         let path = self.path.clone();
         let id = tree.add_value(self);
 
         if path.is_dir() {
-            for dir_entry in path.read_dir()?.flatten() {
-                let child_id = Entry::new(&dir_entry.path()).add_to_tree(tree)?;
+            let from_entries = entries.iter().filter_map(|entry| {
+                let path = path.join(&entry.name);
+                path.exists().then_some((path, entry.entries.as_deref()))
+            });
+
+            let from_read_dir = path.read_dir()?.flatten().filter_map(|dir_entry| {
+                let name = dir_entry.file_name();
+                (name != "_state" && entries.iter().all(|entry| *entry.name != name))
+                    .then_some((dir_entry.path(), None))
+            });
+
+            for (path, entries) in from_entries.chain(from_read_dir) {
+                let child_id = Entry::new(&path).add_to_tree(entries.unwrap_or_default(), tree)?;
                 tree.append(id, child_id);
             }
         }
