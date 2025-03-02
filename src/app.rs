@@ -381,7 +381,7 @@ impl App {
 
     pub fn open_all_folds(&mut self) {
         if let Some(entries) = self.profiles.get_entries_mut() {
-            entries.iter_nodes_mut().for_each(|node| {
+            entries.apply_to_nodes(|node| {
                 if let Some(expanded) = node.expanded.as_mut() {
                     *expanded = true;
                 }
@@ -391,9 +391,9 @@ impl App {
 
     pub fn close_all_folds(&mut self) {
         if let Some(entries) = self.profiles.get_entries_mut() {
-            entries.iter_nodes_mut().skip(1).for_each(|node| {
-                if let Some(b) = node.expanded.as_mut() {
-                    *b = false;
+            entries.apply_to_nodes(|node| {
+                if let Some(expanded) = node.expanded.as_mut() {
+                    *expanded = false;
                 }
             });
 

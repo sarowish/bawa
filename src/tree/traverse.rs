@@ -1,4 +1,4 @@
-use super::{skip_first, Node, NodeId, Tree};
+use super::{Node, NodeId, Tree};
 
 macro_rules! gen_iter {
     ($name:ident, next = $next:expr) => {
@@ -110,7 +110,7 @@ pub struct Descendants<'a, T>(Traverse<'a, T>);
 
 impl<'a, T> Descendants<'a, T> {
     pub fn new(ancestor: NodeId, tree: &'a Tree<T>) -> Self {
-        skip_first!(Self(Traverse::new(ancestor, tree)))
+        Self(Traverse::new(ancestor, tree))
     }
 }
 

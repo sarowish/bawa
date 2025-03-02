@@ -87,9 +87,7 @@ impl Display for Entry {
 
 impl Tree<Entry> {
     pub fn update_paths(&mut self, id: NodeId, new_path: &Path) -> Result<()> {
-        let node = &mut self[id];
-        let path = node.path.clone();
-        new_path.clone_into(&mut node.path);
+        let path = self[id].path.clone();
 
         for id in self.descendants(id).collect::<Vec<NodeId>>() {
             let node = &mut self[id];

@@ -1,6 +1,5 @@
 use super::item::TreeItem;
 use crate::tree::{
-    skip_first,
     traverse::{Edge, Traverse},
     NodeId,
 };
@@ -57,7 +56,7 @@ where
         let mut items = Vec::new();
         let mut depth = 0;
 
-        for edge in skip_first!(Traverse::new(NodeId::new(0), tree).visible()) {
+        for edge in Traverse::new(NodeId::new(0), tree).visible().skip(1) {
             match edge {
                 Edge::Start(id) => {
                     let node = &tree[id];

@@ -20,8 +20,6 @@ macro_rules! skip_first {
     }};
 }
 
-pub(super) use skip_first;
-
 pub struct Tree<T> {
     nodes: Vec<Node<T>>,
 }
@@ -274,7 +272,7 @@ impl<T> Tree<T> {
         self.update_neighbours(parent, prev, next);
     }
 
-    /// Returns an iterator over the ids of the nodes in insertion order.
+    /// Returns an iterator over the ids of the nodes.
     ///
     /// # Examples
     ///
@@ -300,24 +298,34 @@ impl<T> Tree<T> {
     /// let mut iter = tree.iter_ids();
     /// assert_eq!(iter.next(), Some(r));
     /// assert_eq!(iter.next(), Some(a));
-    /// assert_eq!(iter.next(), Some(b));
-    /// assert_eq!(iter.next(), Some(c));
     /// assert_eq!(iter.next(), Some(a_d));
-    /// assert_eq!(iter.next(), Some(a_e));
-    /// assert_eq!(iter.next(), Some(b_f));
     /// assert_eq!(iter.next(), Some(a_d_g));
+    /// assert_eq!(iter.next(), Some(a_e));
+    /// assert_eq!(iter.next(), Some(b));
+    /// assert_eq!(iter.next(), Some(b_f));
+    /// assert_eq!(iter.next(), Some(c));
+    ///
     /// assert_eq!(iter.next(), None);
     /// ```
     pub fn iter_ids(&self) -> impl Iterator<Item = NodeId> {
-        (0..self.nodes.len()).map(NodeId::new)
+        self.descendants(NodeId::new(0))
+            .collect::<Vec<NodeId>>()
+            .into_iter()
     }
 
-    pub fn iter_nodes(&self) -> std::slice::Iter<Node<T>> {
-        self.nodes.iter()
+    /// Returns an iterator over the nodes.
+    pub fn iter_nodes(&self) -> impl Iterator<Item = &Node<T>> {
+        self.iter_ids().map(|id| &self[id])
     }
 
-    pub fn iter_nodes_mut(&mut self) -> std::slice::IterMut<Node<T>> {
-        self.nodes.iter_mut()
+    /// Executes the given closure for each node excluding root.
+    pub fn apply_to_nodes<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut Node<T>),
+    {
+        self.iter_ids().skip(1).for_each(|id| {
+            f(&mut self[id]);
+        });
     }
 
     /// Returns an iterator over [parent](NodeId)'s children.
@@ -466,7 +474,7 @@ impl<T> Tree<T> {
         PrecedingSiblings::new(node, self)
     }
 
-    /// Returns an iterator over the given node's descendants.
+    /// Returns an iterator over the given node's descendants including itself.
     ///
     /// # Examples
     ///
@@ -487,6 +495,7 @@ impl<T> Tree<T> {
     ///
     /// let mut iter = tree.descendants(a);
     ///
+    /// assert_eq!(iter.next(), Some(a));
     /// assert_eq!(iter.next(), Some(a_c));
     /// assert_eq!(iter.next(), Some(a_d));
     ///
