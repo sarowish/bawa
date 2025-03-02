@@ -53,7 +53,7 @@ impl Entry {
 
     pub fn delete(&self) -> Result<()> {
         Ok(if self.is_folder {
-            std::fs::remove_dir(&self.path)
+            std::fs::remove_dir_all(&self.path)
         } else {
             std::fs::remove_file(&self.path)
         }?)
