@@ -5,7 +5,7 @@ use crate::{
     help::Help,
     input::{self, ConfirmationContext, Input, Mode},
     message::Message,
-    profile::Profiles,
+    profile::{Profile, Profiles},
     search::{FuzzyFinder, Search},
     tree::{Node, NodeId, TreeState},
     ui, utils,
@@ -122,7 +122,7 @@ impl App {
         let active_path = self
             .profiles
             .get_profile()
-            .and_then(|profile| profile.get_active_save_file());
+            .and_then(Profile::get_active_save_file);
 
         if let Some(entries) = self.profiles.get_entries_mut() {
             self.tree_state = TreeState::default();
