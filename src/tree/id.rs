@@ -12,6 +12,12 @@ impl NodeId {
         }
     }
 
+    pub const fn root() -> Self {
+        Self {
+            id: NonZeroUsize::new(1).unwrap(),
+        }
+    }
+
     pub fn index0(self) -> usize {
         self.id.get() - 1
     }

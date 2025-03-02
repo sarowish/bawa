@@ -63,7 +63,7 @@ impl TreeState {
     /// state.select_unchecked(Some(NodeId::new(1)));
     /// ```
     pub fn select_unchecked(&mut self, id: Option<NodeId>) {
-        if matches!(id, Some(id) if id != NodeId::new(0)) {
+        if matches!(id, Some(id) if id != NodeId::root()) {
             self.selected = id;
         }
     }
@@ -113,7 +113,7 @@ impl TreeState {
     pub fn select_next<T>(&mut self, tree: &Tree<T>) {
         if let Some(id) = self.selected {
             self.selected = next_start(
-                &mut Traverse::new(NodeId::new(0), tree)
+                &mut Traverse::new(NodeId::root(), tree)
                     .visible()
                     .from(id)
                     .skip(1),
@@ -164,7 +164,7 @@ impl TreeState {
     pub fn select_prev<T>(&mut self, tree: &Tree<T>) {
         if let Some(id) = self.selected {
             self.selected = next_start(
-                &mut Traverse::new(NodeId::new(0), tree)
+                &mut Traverse::new(NodeId::root(), tree)
                     .visible()
                     .to(id)
                     .rev()

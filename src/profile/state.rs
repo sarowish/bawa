@@ -19,7 +19,7 @@ impl Serialize for Profile {
     where
         S: Serializer,
     {
-        let entries = (self.entries.children(self.entries.root_id().unwrap()))
+        let entries = (self.entries.children(NodeId::root()))
             .map(|id| SerializeHelper::new(id, &self.entries))
             .collect::<Vec<SerializeHelper>>();
 

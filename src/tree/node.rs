@@ -145,7 +145,7 @@ impl<T> Node<T> {
     }
 
     pub fn non_root_parent(&self) -> Option<NodeId> {
-        self.parent.filter(|id| *id != NodeId::new(0))
+        self.parent.filter(|id| *id != NodeId::root())
     }
 
     pub fn is_expanded(&self) -> bool {

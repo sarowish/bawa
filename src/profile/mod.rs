@@ -247,7 +247,7 @@ impl HandleFileSystemEvent for Profiles {
         }
 
         if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
-            profile.entries.update_paths(NodeId::new(0), new_path)?;
+            profile.entries.update_paths(NodeId::root(), new_path)?;
         }
 
         Ok(())

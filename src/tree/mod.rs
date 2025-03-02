@@ -95,10 +95,6 @@ impl<T> Tree<T> {
         self.nodes.first_mut()
     }
 
-    pub fn root_id(&self) -> Option<NodeId> {
-        (!self.nodes.is_empty()).then_some(NodeId::new(0))
-    }
-
     pub fn empty(&mut self) {
         self.nodes.drain(..);
     }
@@ -308,7 +304,7 @@ impl<T> Tree<T> {
     /// assert_eq!(iter.next(), None);
     /// ```
     pub fn iter_ids(&self) -> impl Iterator<Item = NodeId> {
-        self.descendants(NodeId::new(0))
+        self.descendants(NodeId::root())
             .collect::<Vec<NodeId>>()
             .into_iter()
     }

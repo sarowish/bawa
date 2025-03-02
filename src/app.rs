@@ -243,12 +243,11 @@ impl App {
     pub fn context_path(&mut self, top_level: bool) -> PathBuf {
         let entries = self.profiles.get_entries_mut().unwrap();
 
-        let node = (!top_level)
+        let id = (!top_level)
             .then_some(self.tree_state.selected.and_then(|id| entries.context(id)))
             .flatten()
-            .or(entries.root_id())
-            .map(|id| &mut entries[id])
-            .unwrap();
+            .unwrap_or(NodeId::root());
+        let node = &mut entries[id];
 
         node.expanded = Some(true);
         node.path.clone()
@@ -400,7 +399,7 @@ impl App {
             if let Some(id) = self.tree_state.selected.and_then(|id| {
                 entries
                     .ancestors(id)
-                    .filter(|id| Some(id) != entries.root_id().as_ref())
+                    .filter(|id| *id != NodeId::root())
                     .last()
             }) {
                 self.tree_state.selected = Some(id);
@@ -468,8 +467,8 @@ impl App {
                 self.tree_state.select_unchecked(
                     entries
                         .predecessors(id)
-                        .chain(entries.children(NodeId::new(0)).rev())
-                        .find(|id| entries[*id].is_folder() && *id != NodeId::new(0)),
+                        .chain(entries.children(NodeId::root()).rev())
+                        .find(|id| entries[*id].is_folder() && *id != NodeId::root()),
                 );
             }
         } else {
@@ -488,8 +487,8 @@ impl App {
                                 .ancestors(id)
                                 .flat_map(|id| entries.following_siblings(id)),
                         )
-                        .chain(entries.children(NodeId::new(0)))
-                        .find(|id| entries[*id].is_folder() && *id != NodeId::new(0)),
+                        .chain(entries.children(NodeId::root()))
+                        .find(|id| entries[*id].is_folder() && *id != NodeId::root()),
                 );
             }
         } else {
