@@ -763,8 +763,10 @@ impl HandleFileSystemEvent for App {
         }
 
         if let Some(entry_id) = profile.entries.find_by_path(path) {
+            if matches!(self.tree_state.selected, Some(id) if id == entry_id) {
+                self.tree_state.select_prev(&profile.entries);
+            }
             self.tree_state.unmark(entry_id);
-            self.tree_state.select_prev(&profile.entries);
             profile.entries.detach(entry_id);
         }
 
