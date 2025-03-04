@@ -529,6 +529,7 @@ impl App {
 
         if mark_as_active {
             profile.update_active_save_file(path)?;
+            self.tree_state.active = self.tree_state.selected;
         }
 
         Ok(())
@@ -540,8 +541,6 @@ impl App {
                 let path = entry.path.clone();
                 if let Err(e) = self.load_save_file(&path, true) {
                     self.message.set_error(&e);
-                } else {
-                    self.tree_state.active = self.tree_state.selected;
                 }
             }
         }
