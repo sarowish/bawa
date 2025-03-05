@@ -142,7 +142,8 @@ impl App {
             if let Some(root) = entries.root_mut() {
                 root.toggle_fold();
             }
-            self.select_first();
+
+            self.tree_state.select_first(entries);
         }
     }
 
@@ -161,6 +162,7 @@ impl App {
         if let Ok(selected_new_profile) = self.profiles.select_profile() {
             if selected_new_profile {
                 self.setup_state();
+                self.auto_mark_save_file();
                 self.watcher
                     .watch_profile_entries(&self.profiles.get_profile().unwrap().path);
 
