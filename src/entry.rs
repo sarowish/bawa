@@ -86,7 +86,7 @@ impl Display for Entry {
 }
 
 impl Tree<Entry> {
-    /// Updates the paths of the entry end its descendants.
+    /// Updates the paths of the entry and its descendants.
     pub fn update_paths(&mut self, id: NodeId, new_path: &Path) -> Result<()> {
         let path = self[id].path.clone();
 
