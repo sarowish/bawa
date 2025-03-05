@@ -86,12 +86,19 @@ impl Display for Entry {
 }
 
 impl Tree<Entry> {
+    /// Updates the paths of the entry end its descendants.
     pub fn update_paths(&mut self, id: NodeId, new_path: &Path) -> Result<()> {
         let path = self[id].path.clone();
 
         for id in self.descendants(id).collect::<Vec<NodeId>>() {
             let node = &mut self[id];
-            node.path = new_path.join(node.path.strip_prefix(&path)?);
+            let rel_path = node.path.strip_prefix(&path)?;
+
+            node.path = if rel_path.parent().is_some() {
+                new_path.join(rel_path)
+            } else {
+                new_path.to_owned()
+            };
         }
 
         Ok(())
