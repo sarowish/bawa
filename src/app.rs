@@ -2,11 +2,15 @@ use crate::{
     config::{options, OPTIONS},
     entry::Entry,
     event::Event,
+    fuzzy_finder::{
+        picker::{Global, Local},
+        FuzzyFinder,
+    },
     help::Help,
     input::{self, ConfirmationContext, Input, Mode},
     message::Message,
     profile::{Profile, Profiles},
-    search::{FuzzyFinder, Search},
+    search::Search,
     tree::{Node, NodeId, TreeState},
     ui, utils,
     watcher::{
@@ -143,6 +147,8 @@ impl App {
     }
 
     pub fn select_profile(&mut self) {
+        self.footer_input = None;
+        self.fuzzy_finder.reset();
         self.mode = Mode::ProfileSelection;
     }
 
@@ -672,23 +678,29 @@ impl App {
         self.set_index_of_active_list(new_idx.copied());
     }
 
-    pub fn open_fuzzy_finder(&mut self) {
-        if let Some(profile) = self.profiles.get_profile() {
-            self.fuzzy_finder
-                .fill_paths(&profile.get_file_rel_paths(false));
-            self.fuzzy_finder.update_matches();
-        }
+    pub fn open_fuzzy_finder(&mut self, global: bool) {
+        self.fuzzy_finder.picker = Some(if global {
+            Box::new(Global::new(self).unwrap())
+        } else {
+            Box::new(Local::new(self))
+        });
+
+        self.fuzzy_finder.update_matches();
     }
 
     pub fn jump_to_entry(&mut self) {
-        let profile = self.profiles.get_profile_mut().unwrap();
-        let selected_item = self.fuzzy_finder.matched_items.get_selected();
-        let abs_path = profile.abs_path_to(&selected_item.as_ref().unwrap().text);
+        let Some(idx) = self
+            .fuzzy_finder
+            .matched
+            .get_selected()
+            .map(|item| item.idx)
+        else {
+            return;
+        };
 
-        self.tree_state.select(
-            profile.entries.find_by_path(&abs_path),
-            &mut profile.entries,
-        );
+        if let Some(picker) = self.fuzzy_finder.picker.take() {
+            picker.jump(idx, self);
+        }
     }
 
     pub fn mark_entry(&mut self) {
@@ -835,16 +847,12 @@ impl<T> StatefulList<T> {
     }
 
     pub fn get_selected(&self) -> Option<&T> {
-        match self.state.selected() {
-            Some(i) => Some(&self.items[i]),
-            None => None,
-        }
+        self.state.selected().and_then(|idx| self.items.get(idx))
     }
 
-    pub fn get_mut_selected(&mut self) -> Option<&mut T> {
-        match self.state.selected() {
-            Some(i) => Some(&mut self.items[i]),
-            None => None,
-        }
+    pub fn get_selected_mut(&mut self) -> Option<&mut T> {
+        self.state
+            .selected()
+            .and_then(|idx| self.items.get_mut(idx))
     }
 }

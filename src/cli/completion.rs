@@ -1,7 +1,7 @@
 use crate::{
     config::SKIP_CONFIG,
+    fuzzy_finder::FuzzyFinder,
     profile::{get_profiles, Profile, Profiles},
-    search::FuzzyFinder,
 };
 use clap_complete::CompletionCandidate;
 use std::{ffi::OsStr, path::MAIN_SEPARATOR};

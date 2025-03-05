@@ -56,6 +56,10 @@ impl Profile {
     }
 
     pub fn load_entries(&mut self) -> Result<()> {
+        if self.entries.root().is_some() {
+            return Ok(());
+        }
+
         let state_file = self.abs_path_to("_state");
         let root = Entry::new(&self.path);
         if let Some(state) = fs::read(state_file)
@@ -191,6 +195,10 @@ impl Profiles {
     }
 
     pub fn select_profile(&mut self) -> Result<bool> {
+        if self.inner.get_selected().is_none() {
+            return Err(anyhow::anyhow!("Can't select profile"));
+        };
+
         if let Some(idx) = self.active_profile {
             if matches!(self.inner.state.selected(), Some(selected_idx) if idx == selected_idx) {
                 return Ok(false);
@@ -199,14 +207,12 @@ impl Profiles {
             self.inner.items[idx].entries.empty();
         }
 
-        if let Some(profile) = self.inner.get_mut_selected() {
-            profile.load_entries()?;
-            update_active_profile(&profile.name())?;
-            self.active_profile = self.inner.state.selected();
-            Ok(true)
-        } else {
-            Err(anyhow::anyhow!("There aren't any profiles to select"))
-        }
+        let profile = self.inner.get_selected_mut().unwrap();
+        profile.load_entries()?;
+        update_active_profile(&profile.name())?;
+        self.active_profile = self.inner.state.selected();
+
+        Ok(true)
     }
 
     pub fn get_profile(&self) -> Option<&Profile> {

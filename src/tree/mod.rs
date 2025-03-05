@@ -268,6 +268,31 @@ impl<T> Tree<T> {
         self.update_neighbours(parent, prev, next);
     }
 
+    /// Returns `true` if the node is not connected to the root node.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use bawa::tree::Tree;
+    /// let mut tree = Tree::default();
+    /// let r = tree.add_value("r");
+    /// let a = tree.add_value("a");
+    /// let b = tree.add_value("b");
+    /// let c = tree.add_value("c");
+    /// tree.append(r, a);
+    /// tree.append(r, b);
+    /// tree.append(r, c);
+    /// tree.detach(b);
+    ///
+    /// assert!(!tree.detached_from_root(a));
+    /// assert!(tree.detached_from_root(b));
+    /// ```
+    pub fn detached_from_root(&self, id: NodeId) -> bool {
+        Ancestors::new(id, self)
+            .last()
+            .is_some_and(|id| id != NodeId::root())
+    }
+
     /// Returns an iterator over the ids of the nodes.
     ///
     /// # Examples

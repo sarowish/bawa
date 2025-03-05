@@ -16,6 +16,7 @@ impl TreeState {
     /// Sets the node with the given `id` as the selected item.
     ///
     /// Sets to `None` if no node is selected. Expands ancestor nodes if they are not expanded.
+    /// Aborts if the node is detached from the root node.
     ///
     /// # Examples
     /// ```
@@ -41,16 +42,21 @@ impl TreeState {
     /// assert!(tree[a].is_expanded());
     /// ```
     pub fn select<T>(&mut self, id: Option<NodeId>, tree: &mut Tree<T>) {
-        self.selected = id;
-
         if let Some(id) = id {
+            if tree.get(id).is_none() || tree.detached_from_root(id) {
+                return;
+            }
+
             for id in tree.ancestors(id).collect::<Vec<NodeId>>() {
-                tree[id].expanded = Some(true)
+                tree[id].expanded = Some(true);
             }
         }
+
+        self.select_unchecked(id);
     }
 
-    /// Sets the node with the given `id` as the selected item.
+    /// Sets the node with the given `id` as the selected item. Aborts if trying to select the root
+    /// node.
     ///
     /// Sets to `None` if no node is selected. Doesn't ensure that the ancestor nodes are expanded.
     ///

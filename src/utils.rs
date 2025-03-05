@@ -127,9 +127,3 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> Result<()> {
     tmp.persist(path)?;
     Ok(())
 }
-
-pub fn upper_char_boundaries(text: &str) -> Vec<usize> {
-    (1..=text.len())
-        .filter(|idx| text.is_char_boundary(*idx))
-        .collect()
-}

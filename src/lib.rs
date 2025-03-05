@@ -4,6 +4,7 @@ mod commands;
 pub mod config;
 mod entry;
 mod event;
+mod fuzzy_finder;
 mod help;
 mod input;
 mod message;

@@ -2,10 +2,10 @@ use super::{confirmation::draw_confirmation_window, popup::window_from_dimension
 use crate::{
     app::{App, StatefulList},
     config::THEME,
+    fuzzy_finder::FuzzyFinder,
     help::Help,
     input::{Mode, SearchContext},
     message::Kind as MessageKind,
-    search::FuzzyFinder,
     tree::widget::Tree,
 };
 use ratatui::{
@@ -122,27 +122,32 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
         f.render_widget(counter, counter_area);
     }
 
-    let selected_idx = fuzzy_finder.matched_items.state.selected().unwrap_or(0);
-    let results = List::new(fuzzy_finder.matched_items.items.iter().enumerate().map(
-        |(idx, item)| {
-            let mut line = item.highlight_slices();
-            line.insert(0, (if selected_idx == idx { "> " } else { "  " }, false));
-            let line = Line::from(
-                line.into_iter()
-                    .map(|(slice, highlighted)| {
-                        if highlighted {
-                            Span::styled(slice, THEME.highlight)
-                        } else if selected_idx == idx {
-                            Span::styled(slice, THEME.fuzzy_selected)
-                        } else {
-                            Span::raw(slice)
-                        }
-                    })
-                    .collect::<Vec<Span>>(),
-            );
-            ListItem::new(line)
-        },
-    ))
+    let selected_idx = fuzzy_finder.matched.state.selected().unwrap_or(0);
+    let results = List::new(
+        fuzzy_finder
+            .matched
+            .items
+            .iter()
+            .enumerate()
+            .map(|(idx, item)| {
+                let mut line = item.highlight_slices();
+                line.insert(0, (if selected_idx == idx { "> " } else { "  " }, false));
+                let line = Line::from(
+                    line.into_iter()
+                        .map(|(slice, highlighted)| {
+                            if highlighted {
+                                Span::styled(slice, THEME.highlight)
+                            } else if selected_idx == idx {
+                                Span::styled(slice, THEME.fuzzy_selected)
+                            } else {
+                                Span::raw(slice)
+                            }
+                        })
+                        .collect::<Vec<Span>>(),
+                );
+                ListItem::new(line)
+            }),
+    )
     .block(
         Block::default()
             .title(Span::styled("Results", THEME.title))
@@ -150,7 +155,7 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
             .border_type(BorderType::Rounded),
     );
 
-    f.render_stateful_widget(results, results_area, &mut fuzzy_finder.matched_items.state);
+    f.render_stateful_widget(results, results_area, &mut fuzzy_finder.matched.state);
 }
 
 fn draw_help(f: &mut Frame, help: &mut Help) {

@@ -1,6 +1,7 @@
 use super::CLAP_ARGS;
 use crate::{
     app::App,
+    fuzzy_finder::picker::Local,
     profile::Profiles,
     tree::{widget::Tree, TreeState},
     utils,
@@ -169,8 +170,8 @@ fn get_entry_path(args: &ArgMatches, app: &mut App) -> Result<Option<PathBuf>> {
 
     if args.get_flag("fuzzy") {
         app.fuzzy_finder.input.set_text(relative_path.unwrap_or(""));
-        let paths = profile.get_file_rel_paths(false);
-        relative_path = app.fuzzy_finder.run_inline(&paths)?;
+        app.fuzzy_finder.picker = Some(Box::new(Local::new(app)));
+        relative_path = app.fuzzy_finder.run_inline()?;
     }
 
     Ok(relative_path.map(|rel_path| profile.abs_path_to(rel_path)))

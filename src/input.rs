@@ -1,14 +1,13 @@
-use std::ops::RangeBounds;
-
 use crate::{
     app::App,
     commands::{Command, HelpCommand, ProfileSelectionCommand},
     config::KEY_BINDINGS,
+    fuzzy_finder::FuzzyFinder,
     help::Help,
     profile::Profiles,
-    search::FuzzyFinder,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use std::ops::RangeBounds;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -313,7 +312,8 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::EnterSearch => app.take_input(Mode::Search(SearchContext::Normal)),
             Command::RepeatLastSearch => app.repeat_search(),
             Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
-            Command::OpenFuzzyFinder => app.open_fuzzy_finder(),
+            Command::OpenFuzzyFinder => app.open_fuzzy_finder(false),
+            Command::OpenFuzzyFinderGlobal => app.open_fuzzy_finder(true),
             Command::MarkEntry => app.mark_entry(),
             Command::Reset => app.tree_state.marked.clear(),
             Command::Quit => return true,
@@ -394,10 +394,10 @@ pub fn handle_key_fuzzy_mode(key: KeyEvent, fuzzy_finder: &mut FuzzyFinder) {
 
     match (key.code, key.modifiers) {
         (KeyCode::Down | KeyCode::Tab, _) | (KeyCode::Char('n'), KeyModifiers::CONTROL) => {
-            fuzzy_finder.matched_items.next();
+            fuzzy_finder.matched.next();
         }
         (KeyCode::Up | KeyCode::BackTab, _) | (KeyCode::Char('p'), KeyModifiers::CONTROL) => {
-            fuzzy_finder.matched_items.previous();
+            fuzzy_finder.matched.previous();
         }
         _ if input.update(key) => fuzzy_finder.update_matches(),
         _ => {}
@@ -432,7 +432,7 @@ fn complete(app: &mut App) {
             Ok(())
         }
         Mode::Normal
-            if app.fuzzy_finder.is_active() && !app.fuzzy_finder.matched_items.items.is_empty() =>
+            if app.fuzzy_finder.is_active() && !app.fuzzy_finder.matched.items.is_empty() =>
         {
             app.jump_to_entry();
             app.fuzzy_finder.reset();
@@ -460,12 +460,8 @@ fn abort(app: &mut App) {
         | Mode::FolderCreation(..)
         | Mode::ProfileCreation
         | Mode::ProfileRenaming
-        | Mode::Search(..) => {
-            app.abort_input();
-        }
-        Mode::Normal if app.fuzzy_finder.is_active() => {
-            app.fuzzy_finder.reset();
-        }
-        _ => (),
+        | Mode::Search(..) => app.abort_input(),
+        Mode::Normal => app.fuzzy_finder.reset(),
+        Mode::Confirmation(_) => (),
     }
 }
