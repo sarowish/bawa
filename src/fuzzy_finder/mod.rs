@@ -44,6 +44,10 @@ impl FuzzyFinder {
         self.picker.as_ref().map(|picker| picker.items())
     }
 
+    pub fn selected_idx(&self) -> Option<usize> {
+        self.matched.get_selected().map(|item| item.idx)
+    }
+
     pub fn reset(&mut self) {
         self.input.set_text("");
         self.picker.take();

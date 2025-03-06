@@ -1,30 +1,27 @@
-use std::fmt::Display;
+use nucleo_matcher::{
+    pattern::{AtomKind, CaseMatching, Normalization, Pattern},
+    Matcher, Utf32String,
+};
 
 #[derive(Default)]
 pub struct Search {
-    pub matches: Vec<usize>,
+    matcher: Matcher,
     pub pattern: String,
 }
 
 impl Search {
-    pub fn new(pattern: &str) -> Self {
-        Self {
-            matches: Vec::new(),
-            pattern: pattern.to_lowercase(),
-        }
-    }
+    pub fn search(&mut self, list: &[Utf32String]) -> Vec<usize> {
+        let pattern = Pattern::new(
+            &self.pattern,
+            CaseMatching::Smart,
+            Normalization::Smart,
+            AtomKind::Substring,
+        );
 
-    pub fn search<T: Display>(&mut self, list: &[T]) {
-        if self.pattern.is_empty() {
-            return;
-        }
-
-        self.matches = list
-            .iter()
+        list.iter()
             .enumerate()
-            .filter(|(_, text)| text.to_string().to_lowercase().contains(&self.pattern))
+            .filter(|(_, s)| pattern.score(s.slice(..), &mut self.matcher).is_some())
             .map(|(idx, _)| idx)
-            .collect();
+            .collect()
     }
 }
-

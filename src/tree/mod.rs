@@ -2,7 +2,7 @@ pub use id::NodeId;
 pub use node::Node;
 use std::ops::{Index, IndexMut};
 use traverse::{
-    Ancestors, Children, Descendants, FollowingSiblings, PrecedingSiblings, Predecessors,
+    Ancestors, Children, Descendants, FollowingSiblings, PrecedingSiblings, Predecessors, Visible,
 };
 pub use widget::TreeState;
 
@@ -524,6 +524,38 @@ impl<T> Tree<T> {
     /// ```
     pub fn descendants(&self, ancestor: NodeId) -> Descendants<T> {
         Descendants::new(ancestor, self)
+    }
+
+    /// Returns an iterator over the given node's visible descendants.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use bawa::tree::Tree;
+    /// let mut tree = Tree::default();
+    ///
+    /// let r = tree.add_value("r");
+    /// let a = tree.add_value("a");
+    /// let b = tree.add_value("b");
+    /// let a_c = tree.add_value("c");
+    /// let a_d = tree.add_value("d");
+    ///
+    /// tree.append(r, a);
+    /// tree.append(a, a_c);
+    /// tree.append(a, a_d);
+    /// tree.append(r, b);
+    ///
+    /// tree[r].expanded = Some(true);
+    ///
+    /// let mut iter = tree.visible(r);
+    ///
+    /// assert_eq!(iter.next(), Some(a));
+    /// assert_eq!(iter.next(), Some(b));
+    ///
+    /// assert_eq!(iter.next(), None);
+    /// ```
+    pub fn visible(&self, ancestor: NodeId) -> Visible<T> {
+        skip_first!(Visible::new(ancestor, self))
     }
 }
 

@@ -122,6 +122,22 @@ impl<T> Iterator for Descendants<'_, T> {
     }
 }
 
+pub struct Visible<'a, T>(Traverse<'a, T>);
+
+impl<'a, T> Visible<'a, T> {
+    pub fn new(ancestor: NodeId, tree: &'a Tree<T>) -> Self {
+        Self(Traverse::new(ancestor, tree).visible())
+    }
+}
+
+impl<T> Iterator for Visible<'_, T> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        next_start(&mut self.0)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Edge {
     Start(NodeId),

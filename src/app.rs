@@ -20,6 +20,7 @@ use crate::{
 use anyhow::{ensure, Context, Result};
 use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
+use nucleo_matcher::Utf32String;
 use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
@@ -506,20 +507,27 @@ impl App {
 
     fn get_index_of_active_list(&mut self) -> Option<usize> {
         match self.mode {
-            Mode::Normal => self.tree_state.selected.map(NodeId::index0),
+            Mode::Normal => self.tree_state.selected.and_then(|selected| {
+                self.profiles
+                    .get_entries()
+                    .unwrap()
+                    .visible(NodeId::root())
+                    .position(|id| id == selected)
+            }),
             Mode::ProfileSelection => self.profiles.inner.state.selected(),
             _ => unreachable!(),
         }
     }
 
     fn set_index_of_active_list(&mut self, new_idx: Option<usize>) {
-        if new_idx.is_none() {
+        let Some(idx) = new_idx else {
             return;
-        }
+        };
 
         match self.mode {
             Mode::Normal => {
-                self.tree_state.select_unchecked(new_idx.map(NodeId::new));
+                let mut visible = self.profiles.get_entries().unwrap().visible(NodeId::root());
+                self.tree_state.select_unchecked(visible.nth(idx));
                 self.auto_mark_save_file();
             }
             Mode::ProfileSelection => self.profiles.inner.state.select(new_idx),
@@ -610,72 +618,63 @@ impl App {
 
     pub fn search_new_pattern(&mut self) {
         let pattern = self.extract_input();
-        self.search = Search::new(&pattern);
+        self.search.pattern = pattern;
         self.repeat_search();
     }
 
-    fn run_search(&mut self) {
+    fn run_search(&mut self) -> Vec<usize> {
         if self.search.pattern.is_empty() {
-            return;
+            return Vec::new();
         }
 
-        let list = match self.mode {
+        let items: Vec<_> = match self.mode {
             Mode::Normal => {
                 let entries = self.profiles.get_entries().unwrap();
                 entries
-                    .iter_nodes()
-                    .map(|node| node.to_string())
-                    .collect::<Vec<String>>()
+                    .visible(NodeId::root())
+                    .map(|id| Utf32String::from(entries[id].to_string()))
+                    .collect()
             }
             Mode::ProfileSelection => self
                 .profiles
                 .inner
                 .items
                 .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<String>>(),
+                .map(|p| Utf32String::from(p.name()))
+                .collect(),
             _ => unreachable!(),
         };
 
-        self.search.search(&list);
+        let matches = self.search.search(&items);
 
-        if self.search.matches.is_empty() {
+        if matches.is_empty() {
             self.message
                 .set_error_from_str(&format!("Pattern not found: {}", self.search.pattern));
         } else {
             self.message.clear();
         }
+
+        matches
     }
 
     pub fn repeat_search(&mut self) {
-        self.run_search();
+        let matches = self.run_search();
 
-        let new_idx = if let Some(selected_idx) = self.get_index_of_active_list() {
-            self.search
-                .matches
-                .iter()
-                .find(|index| **index > selected_idx)
-                .or_else(|| self.search.matches.first())
-        } else {
-            self.search.matches.first()
-        };
+        let new_idx = self
+            .get_index_of_active_list()
+            .and_then(|selected_idx| matches.iter().find(|index| **index > selected_idx))
+            .or(matches.first());
 
         self.set_index_of_active_list(new_idx.copied());
     }
 
     pub fn repeat_search_backwards(&mut self) {
-        self.run_search();
+        let matches = self.run_search();
 
-        let new_idx = if let Some(selected_idx) = self.get_index_of_active_list() {
-            self.search
-                .matches
-                .iter()
-                .rev()
-                .find(|index| **index < selected_idx)
-                .or_else(|| self.search.matches.last())
-        } else {
-            self.search.matches.last()
-        };
+        let new_idx = self
+            .get_index_of_active_list()
+            .and_then(|selected_idx| matches.iter().rev().find(|index| **index < selected_idx))
+            .or(matches.last());
 
         self.set_index_of_active_list(new_idx.copied());
     }
@@ -691,18 +690,11 @@ impl App {
     }
 
     pub fn jump_to_entry(&mut self) {
-        let Some(idx) = self
-            .fuzzy_finder
-            .matched
-            .get_selected()
-            .map(|item| item.idx)
-        else {
-            return;
+        if let Some(idx) = self.fuzzy_finder.selected_idx() {
+            if let Some(picker) = self.fuzzy_finder.picker.take() {
+                picker.jump(idx, self);
+            }
         };
-
-        if let Some(picker) = self.fuzzy_finder.picker.take() {
-            picker.jump(idx, self);
-        }
     }
 
     pub fn mark_entry(&mut self) {
