@@ -4,6 +4,16 @@ use std::ops::Deref;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::sync::CancellationToken;
 
+macro_rules! set_msg_if_error {
+    ($message:expr, $res:expr) => {
+        if let Err(e) = $res {
+            $message.set_error(&e);
+        }
+    };
+}
+
+pub(crate) use set_msg_if_error;
+
 pub enum Kind {
     Info,
     Error,

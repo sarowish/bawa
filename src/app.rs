@@ -8,7 +8,7 @@ use crate::{
     },
     help::Help,
     input::{self, ConfirmationContext, Input, Mode},
-    message::Message,
+    message::{set_msg_if_error, Message},
     profile::{Profile, Profiles},
     search::Search,
     tree::{Node, NodeId, TreeState},
@@ -96,9 +96,7 @@ impl App {
                         EventContext::Entry => self.handle_file_system_event(&event),
                     };
 
-                    if let Err(e) = res {
-                        self.message.set_error(&e);
-                    }
+                    set_msg_if_error!(self.message, res);
                 }
                 Event::ClearMessage => self.message.clear(),
             }
@@ -185,9 +183,7 @@ impl App {
             }
         };
 
-        if let Err(e) = res {
-            self.message.set_error(&e);
-        }
+        set_msg_if_error!(self.message, res);
     }
 
     pub fn prompt_for_confirmation(&mut self, context: ConfirmationContext) {
@@ -358,10 +354,6 @@ impl App {
         } else {
             return;
         };
-
-        if let Err(e) = profile.write_state() {
-            self.message.set_error(&e);
-        }
     }
 
     pub fn move_down(&mut self) {
@@ -382,9 +374,7 @@ impl App {
             return;
         };
 
-        if let Err(e) = profile.write_state() {
-            self.message.set_error(&e);
-        }
+        set_msg_if_error!(self.message, profile.write_state());
     }
 
     pub fn open_all_folds(&mut self) {
@@ -555,18 +545,14 @@ impl App {
         if let Some(entry) = self.selected_entry() {
             if entry.is_file() {
                 let path = entry.path.clone();
-                if let Err(e) = self.load_save_file(&path, true) {
-                    self.message.set_error(&e);
-                }
+                set_msg_if_error!(self.message, self.load_save_file(&path, true));
             }
         }
     }
 
     pub fn load_active_save_file(&mut self) {
         if let Some(path) = self.profiles.get_profile().unwrap().get_active_save_file() {
-            if let Err(e) = self.load_save_file(&path, false) {
-                self.message.set_error(&e);
-            }
+            set_msg_if_error!(self.message, self.load_save_file(&path, false));
         } else {
             self.message
                 .set_warning("No active save file exists for the selected profile.");
@@ -580,9 +566,7 @@ impl App {
             .map(|entry| entry.path.clone())
         {
             let profile = self.profiles.get_profile_mut().unwrap();
-            if let Err(e) = profile.update_active_save_file(&path) {
-                self.message.set_error(&e);
-            }
+            set_msg_if_error!(self.message, profile.update_active_save_file(&path));
             self.tree_state.active = self.tree_state.selected;
         }
     }
@@ -600,9 +584,10 @@ impl App {
             .join(save_file_path.file_name().unwrap());
         utils::validate_name(&mut path);
 
-        if let Err(e) = std::fs::copy(&save_file_path, &path) {
-            self.message.set_error(&e.into());
-        }
+        set_msg_if_error!(
+            self.message,
+            std::fs::copy(&save_file_path, &path).map_err(|err| err.into())
+        );
     }
 
     pub fn replace_save_file(&mut self) -> Result<()> {

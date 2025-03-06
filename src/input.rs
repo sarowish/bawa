@@ -4,6 +4,7 @@ use crate::{
     config::KEY_BINDINGS,
     fuzzy_finder::FuzzyFinder,
     help::Help,
+    message::set_msg_if_error,
     profile::Profiles,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -441,9 +442,7 @@ fn complete(app: &mut App) {
         _ => Ok(()),
     };
 
-    if let Err(e) = res {
-        app.message.set_error(&e);
-    }
+    set_msg_if_error!(app.message, res);
 }
 
 fn abort(app: &mut App) {
