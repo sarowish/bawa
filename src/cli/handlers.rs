@@ -170,7 +170,7 @@ fn get_entry_path(args: &ArgMatches, app: &mut App) -> Result<Option<PathBuf>> {
 
     if args.get_flag("fuzzy") {
         app.fuzzy_finder.input.set_text(relative_path.unwrap_or(""));
-        app.fuzzy_finder.picker = Some(Box::new(Local::new(app)));
+        app.fuzzy_finder.set_picker(Local::new(app));
         relative_path = app.fuzzy_finder.run_inline()?;
     }
 

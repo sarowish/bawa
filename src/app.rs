@@ -680,11 +680,14 @@ impl App {
     }
 
     pub fn open_fuzzy_finder(&mut self, global: bool) {
-        self.fuzzy_finder.picker = Some(if global {
-            Box::new(Global::new(self).unwrap())
+        if global {
+            match Global::new(self) {
+                Ok(picker) => self.fuzzy_finder.set_picker(picker),
+                Err(e) => self.message.set_error(&e),
+            }
         } else {
-            Box::new(Local::new(self))
-        });
+            self.fuzzy_finder.set_picker(Local::new(self));
+        };
 
         self.fuzzy_finder.update_matches();
     }

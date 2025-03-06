@@ -40,6 +40,11 @@ impl Default for FuzzyFinder {
 }
 
 impl FuzzyFinder {
+    pub fn set_picker(&mut self, picker: impl Picker + 'static) {
+        self.total_count = picker.items().len();
+        self.picker = Some(Box::new(picker))
+    }
+
     fn items(&self) -> Option<Vec<Utf32String>> {
         self.picker.as_ref().map(|picker| picker.items())
     }
