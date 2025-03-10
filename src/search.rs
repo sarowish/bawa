@@ -47,7 +47,7 @@ impl Search {
     /// let idx = search.search(&list, Direction::Backward);
     /// assert_eq!(idx, Some(1));
     ///
-    /// search.starting_index = Some(0);
+    /// search.start_idx = Some(0);
     /// let idx = search.search(&list, Direction::Forward);
     /// assert_eq!(idx, Some(1));
     /// ```
