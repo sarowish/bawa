@@ -1,6 +1,7 @@
 save_file_path = ""
 auto_mark_save_file = false
 hide_extensions = false
+incremental_search = true
 rename = { cursor = "before_ext" }
 
 [theme]
@@ -44,6 +45,8 @@ help = { fg = "Green" }
 "r" = "rename"
 "p" = "move_entries"
 "P" = "move_entries_top_level"
+"M" = "move_up"
+"m" = "move_down"
 "a" = "open_all_folds"
 "z" = "close_all_folds"
 "w" = "select_profile"
@@ -53,6 +56,7 @@ help = { fg = "Green" }
 "n" = "repeat_last_search"
 "N" = "repeat_last_search_backward"
 "s" = "open_fuzzy_finder"
+"S" = "open_fuzzy_finder_global"
 "space" = "mark_entry"
 "esc" = "reset"
 "q" = "quit"

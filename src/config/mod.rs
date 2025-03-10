@@ -149,3 +149,15 @@ fn overwrite_value(table: &mut toml_edit::Table, key: &str, value: impl Into<tom
 
     *existing = toml_edit::Item::Value(value);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::UserConfig;
+    use std::{fs, path::PathBuf};
+
+    pub fn read_example_config() -> UserConfig {
+        let config_path = PathBuf::from("example/config.toml");
+        let config_str = fs::read_to_string(config_path).unwrap();
+        toml::from_str::<UserConfig>(&config_str).unwrap()
+    }
+}

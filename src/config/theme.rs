@@ -213,3 +213,42 @@ impl MergeConfig for Theme {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::UserTheme;
+    use crate::config::tests::read_example_config;
+
+    #[test]
+    fn example_up_to_date() {
+        let user_config = read_example_config();
+
+        let UserTheme {
+            title,
+            selected,
+            marked,
+            active,
+            fuzzy_selected,
+            highlight,
+            fuzzy_prompt,
+            fuzzy_counter,
+            confirmation_border,
+            error,
+            warning,
+            help,
+        } = user_config.theme.unwrap();
+
+        assert!(title.is_some());
+        assert!(selected.is_some());
+        assert!(marked.is_some());
+        assert!(active.is_some());
+        assert!(fuzzy_selected.is_some());
+        assert!(highlight.is_some());
+        assert!(fuzzy_prompt.is_some());
+        assert!(fuzzy_counter.is_some());
+        assert!(confirmation_border.is_some());
+        assert!(error.is_some());
+        assert!(warning.is_some());
+        assert!(help.is_some());
+    }
+}

@@ -38,7 +38,7 @@ pub struct UserOptions {
     save_file_path: Option<PathBuf>,
     auto_mark_save_file: Option<bool>,
     hide_extensions: Option<bool>,
-    pub incremental_search: Option<bool>,
+    incremental_search: Option<bool>,
     rename: Option<RenameOptions>,
 }
 
@@ -125,5 +125,35 @@ pub fn pick_save_file_path() -> Result<PathBuf> {
         }
 
         Err(anyhow::anyhow!("Didn't enter a valid number"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UserOptions;
+    use crate::config::{options::RenameOptions, tests::read_example_config, Config};
+
+    #[test]
+    fn example_up_to_date() {
+        let default = Config::default().options;
+        let user_config = read_example_config();
+
+        let UserOptions {
+            save_file_path,
+            auto_mark_save_file,
+            hide_extensions,
+            incremental_search,
+            rename,
+        } = user_config.options;
+
+        assert!(save_file_path.is_some());
+        assert!(auto_mark_save_file.is_some_and(|opt| opt == default.auto_mark_save_file));
+        assert!(hide_extensions.is_some_and(|opt| opt == default.hide_extensions));
+        assert!(incremental_search.is_some_and(|opt| opt == default.incremental_search));
+
+        let RenameOptions { empty, cursor: _ } = rename.unwrap();
+
+        // `empty` should be empty
+        assert!(empty.is_none());
     }
 }
