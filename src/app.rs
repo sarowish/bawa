@@ -20,7 +20,6 @@ use crate::{
 use anyhow::{ensure, Context, Result};
 use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
-use nucleo_matcher::Utf32String;
 use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
@@ -495,36 +494,6 @@ impl App {
         };
     }
 
-    fn get_index_of_active_list(&mut self) -> Option<usize> {
-        match self.mode {
-            Mode::Normal => self.tree_state.selected.and_then(|selected| {
-                self.profiles
-                    .get_entries()
-                    .unwrap()
-                    .visible(NodeId::root())
-                    .position(|id| id == selected)
-            }),
-            Mode::ProfileSelection => self.profiles.inner.state.selected(),
-            _ => unreachable!(),
-        }
-    }
-
-    fn set_index_of_active_list(&mut self, new_idx: Option<usize>) {
-        let Some(idx) = new_idx else {
-            return;
-        };
-
-        match self.mode {
-            Mode::Normal => {
-                let mut visible = self.profiles.get_entries().unwrap().visible(NodeId::root());
-                self.tree_state.select_unchecked(visible.nth(idx));
-                self.auto_mark_save_file();
-            }
-            Mode::ProfileSelection => self.profiles.inner.state.select(new_idx),
-            _ => unreachable!(),
-        };
-    }
-
     pub fn load_save_file(&mut self, path: &Path, mark_as_active: bool) -> Result<()> {
         std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
 
@@ -599,69 +568,6 @@ impl App {
 
         self.mode = Mode::Normal;
         Ok(())
-    }
-
-    pub fn search_new_pattern(&mut self) {
-        let pattern = self.extract_input();
-        self.search.pattern = pattern;
-        self.repeat_search();
-    }
-
-    fn run_search(&mut self) -> Vec<usize> {
-        if self.search.pattern.is_empty() {
-            return Vec::new();
-        }
-
-        let items: Vec<_> = match self.mode {
-            Mode::Normal => {
-                let entries = self.profiles.get_entries().unwrap();
-                entries
-                    .visible(NodeId::root())
-                    .map(|id| Utf32String::from(entries[id].to_string()))
-                    .collect()
-            }
-            Mode::ProfileSelection => self
-                .profiles
-                .inner
-                .items
-                .iter()
-                .map(|p| Utf32String::from(p.name()))
-                .collect(),
-            _ => unreachable!(),
-        };
-
-        let matches = self.search.search(&items);
-
-        if matches.is_empty() {
-            self.message
-                .set_error_from_str(&format!("Pattern not found: {}", self.search.pattern));
-        } else {
-            self.message.clear();
-        }
-
-        matches
-    }
-
-    pub fn repeat_search(&mut self) {
-        let matches = self.run_search();
-
-        let new_idx = self
-            .get_index_of_active_list()
-            .and_then(|selected_idx| matches.iter().find(|index| **index > selected_idx))
-            .or(matches.first());
-
-        self.set_index_of_active_list(new_idx.copied());
-    }
-
-    pub fn repeat_search_backwards(&mut self) {
-        let matches = self.run_search();
-
-        let new_idx = self
-            .get_index_of_active_list()
-            .and_then(|selected_idx| matches.iter().rev().find(|index| **index < selected_idx))
-            .or(matches.last());
-
-        self.set_index_of_active_list(new_idx.copied());
     }
 
     pub fn open_fuzzy_finder(&mut self, global: bool) {

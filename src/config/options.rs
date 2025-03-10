@@ -38,6 +38,7 @@ pub struct UserOptions {
     save_file_path: Option<PathBuf>,
     auto_mark_save_file: Option<bool>,
     hide_extensions: Option<bool>,
+    pub incremental_search: Option<bool>,
     rename: Option<RenameOptions>,
 }
 
@@ -45,6 +46,7 @@ pub struct Options {
     pub save_file_path: PathBuf,
     pub auto_mark_save_file: bool,
     pub hide_extensions: bool,
+    pub incremental_search: bool,
     pub rename: RenameOptions,
 }
 
@@ -54,6 +56,7 @@ impl Default for Options {
             save_file_path: PathBuf::new(),
             auto_mark_save_file: false,
             hide_extensions: false,
+            incremental_search: true,
             rename: RenameOptions::default(),
         }
     }
@@ -74,6 +77,7 @@ impl MergeConfig for Options {
         set_options_field!(save_file_path);
         set_options_field!(auto_mark_save_file);
         set_options_field!(hide_extensions);
+        set_options_field!(incremental_search);
         set_options_field!(rename);
 
         Ok(())

@@ -274,7 +274,13 @@ fn draw_list_with_help<T: Display>(
 fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let line = if let Some(input) = &app.footer_input {
         set_cursor(f, input, area);
-        Line::from(Span::raw(format!("{}{}", input.prompt, input.text)))
+        let prompt = Span::raw(&input.prompt);
+        let text = if matches!(app.mode, Mode::Search(_)) && app.search.no_match() {
+            Span::styled(&input.text, THEME.error)
+        } else {
+            Span::raw(&input.text)
+        };
+        Line::from(vec![prompt, text])
     } else if !app.message.is_empty() {
         Line::from(Span::styled(
             app.message.to_owned(),

@@ -1,11 +1,12 @@
 use crate::{
     app::App,
     commands::{Command, HelpCommand, ProfileSelectionCommand},
-    config::KEY_BINDINGS,
+    config::{KEY_BINDINGS, OPTIONS},
     fuzzy_finder::FuzzyFinder,
     help::Help,
     message::set_msg_if_error,
     profile::Profiles,
+    search::Direction,
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use std::ops::RangeBounds;
@@ -41,6 +42,15 @@ impl Mode {
             Mode::Normal => unreachable!(),
         };
     }
+
+    pub fn search_context(&self) -> SearchContext {
+        match self {
+            Mode::Normal => SearchContext::Normal,
+            Mode::ProfileSelection => SearchContext::ProfileSelection,
+            Mode::Search(context) => *context,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -50,7 +60,7 @@ pub enum ConfirmationContext {
     ProfileDeletion,
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub enum SearchContext {
     #[default]
     Normal,
@@ -310,9 +320,9 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::CloseAllFolds => app.close_all_folds(),
             Command::SelectProfile => app.select_profile(),
             Command::ToggleHelp => app.help.toggle(),
-            Command::EnterSearch => app.take_input(Mode::Search(SearchContext::Normal)),
+            Command::EnterSearch => app.search_new_pattern(),
             Command::RepeatLastSearch => app.repeat_search(),
-            Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
+            Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
             Command::OpenFuzzyFinder => app.open_fuzzy_finder(false),
             Command::OpenFuzzyFinderGlobal => app.open_fuzzy_finder(true),
             Command::MarkEntry => app.mark_entry(),
@@ -347,9 +357,9 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::OnUp => profiles.previous(),
             Command::SelectFirst => profiles.select_first(),
             Command::SelectLast => profiles.select_last(),
-            Command::EnterSearch => app.take_input(Mode::Search(SearchContext::ProfileSelection)),
+            Command::EnterSearch => app.search_new_pattern(),
             Command::RepeatLastSearch => app.repeat_search(),
-            Command::RepeatLastSearchBackward => app.repeat_search_backwards(),
+            Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
             Command::Quit => return true,
             _ => (),
         }
@@ -413,7 +423,12 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
             if app.fuzzy_finder.is_active() {
                 handle_key_fuzzy_mode(key, &mut app.fuzzy_finder);
             } else if let Some(input) = &mut app.footer_input {
-                input.update(key);
+                let changed = input.update(key);
+
+                if changed && matches!(app.mode, Mode::Search(_)) && OPTIONS.incremental_search {
+                    app.search.pattern = app.footer_input.as_ref().unwrap().text.clone();
+                    app.run_search(Direction::Forward);
+                }
             };
         }
     }
@@ -428,10 +443,7 @@ fn complete(app: &mut App) {
             let new_name = app.extract_input();
             app.profiles.rename_selected_profile(&new_name)
         }
-        Mode::Search(..) => {
-            app.search_new_pattern();
-            Ok(())
-        }
+        Mode::Search(..) => app.complete_search(),
         Mode::Normal
             if app.fuzzy_finder.is_active() && !app.fuzzy_finder.matched.items.is_empty() =>
         {
@@ -458,8 +470,8 @@ fn abort(app: &mut App) {
         Mode::EntryRenaming
         | Mode::FolderCreation(..)
         | Mode::ProfileCreation
-        | Mode::ProfileRenaming
-        | Mode::Search(..) => app.abort_input(),
+        | Mode::ProfileRenaming => app.abort_input(),
+        Mode::Search(_) => app.abort_search(),
         Mode::Normal => app.fuzzy_finder.reset(),
         Mode::Confirmation(_) => (),
     }

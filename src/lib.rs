@@ -9,7 +9,7 @@ mod help;
 mod input;
 mod message;
 mod profile;
-mod search;
+pub mod search;
 pub mod tree;
 pub mod ui;
 mod utils;
