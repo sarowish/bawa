@@ -10,10 +10,12 @@ use ratatui::{
 use std::{io::stdout, panic, sync::Once};
 
 pub use draw::{draw, draw_fuzzy_finder};
+pub use scroller::Scroller;
 
-mod confirmation;
+pub mod confirmation;
 mod draw;
 mod popup;
+mod scroller;
 
 static ALTERNATE_SCREEN: Once = Once::new();
 

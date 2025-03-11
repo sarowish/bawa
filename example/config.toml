@@ -75,3 +75,13 @@ help = { fg = "Green" }
 "g" = "go_to_top"
 "G" = "go_to_bottom"
 "esc" = "abort"
+
+[key_bindings.confirmation]
+"y" = "confirm"
+"enter" = "confirm"
+"n" = "cancel"
+"esc" = "cancel"
+"ctrl-y" = "scroll_up"
+"ctrl-e" = "scroll_down"
+"g" = "go_to_top"
+"G" = "go_to_bottom"

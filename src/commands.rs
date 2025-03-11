@@ -135,3 +135,31 @@ impl TryFrom<&str> for HelpCommand {
         Ok(command)
     }
 }
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ConfirmationCommand {
+    Confirm,
+    Cancel,
+    ScrollUp,
+    ScrollDown,
+    GoToTop,
+    GoToBottom,
+}
+
+impl TryFrom<&str> for ConfirmationCommand {
+    type Error = anyhow::Error;
+
+    fn try_from(command: &str) -> Result<Self, Self::Error> {
+        let command = match command {
+            "confirm" => ConfirmationCommand::Confirm,
+            "cancel" => ConfirmationCommand::Cancel,
+            "scroll_up" => ConfirmationCommand::ScrollUp,
+            "scroll_down" => ConfirmationCommand::ScrollDown,
+            "go_to_top" => ConfirmationCommand::GoToTop,
+            "go_to_bottom" => ConfirmationCommand::GoToBottom,
+            _ => anyhow::bail!("\"{}\" is an invalid command", command),
+        };
+
+        Ok(command)
+    }
+}

@@ -7,12 +7,16 @@ use crate::{
         FuzzyFinder,
     },
     help::Help,
-    input::{self, ConfirmationContext, Input, Mode},
+    input::{self, Input, Mode},
     message::{set_msg_if_error, Message},
     profile::{Profile, Profiles},
     search::Search,
     tree::{Node, NodeId, TreeState},
-    ui, utils,
+    ui::{
+        self,
+        confirmation::{Context as ConfirmationContext, Prompt},
+    },
+    utils,
     watcher::{
         Context as EventContext, FileSystemEvent, HandleFileSystemEvent, Kind as EventKind, Watcher,
     },
@@ -172,15 +176,14 @@ impl App {
         }
     }
 
-    pub fn on_confirmation(&mut self, context: ConfirmationContext) {
-        let res = match context {
+    pub fn on_confirmation(&mut self) {
+        let res = match self.mode.confirmation_context() {
             ConfirmationContext::Deletion => self.delete_selected_entry(),
             ConfirmationContext::Replacing => self.replace_save_file(),
-            ConfirmationContext::ProfileDeletion => {
-                self.mode = Mode::ProfileSelection;
-                self.profiles.delete_selected_profile()
-            }
+            ConfirmationContext::ProfileDeletion => self.profiles.delete_selected_profile(),
         };
+
+        self.mode.select_previous();
 
         set_msg_if_error!(self.message, res);
     }
@@ -192,7 +195,7 @@ impl App {
                 {}
             ConfirmationContext::ProfileDeletion
                 if self.profiles.inner.state.selected().is_none() => {}
-            _ => self.mode = Mode::Confirmation(context),
+            _ => self.mode = Mode::Confirmation(Prompt::new(self, context)),
         }
     }
 
@@ -220,11 +223,8 @@ impl App {
             }
         } else if let Some(entry) = self.selected_entry() {
             entry.delete()?;
-        } else {
-            return Ok(());
-        };
+        }
 
-        self.mode = Mode::Normal;
         Ok(())
     }
 
@@ -566,7 +566,6 @@ impl App {
             }
         }
 
-        self.mode = Mode::Normal;
         Ok(())
     }
 

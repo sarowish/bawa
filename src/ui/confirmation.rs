@@ -1,28 +1,40 @@
-use super::popup::window_from_dimensions;
-use crate::{app::App, config::THEME, input::ConfirmationContext};
+use super::{popup::window_from_dimensions, Scroller};
+use crate::{app::App, config::THEME};
 use ratatui::{
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Constraint, Layout, Offset, Rect},
+    prelude::Buffer,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph, Widget, Wrap},
+    widgets::{
+        Block, BorderType, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, StatefulWidget, Widget, Wrap,
+    },
     Frame,
 };
 
-pub fn draw_confirmation_window(f: &mut Frame, app: &App, context: ConfirmationContext) {
+pub fn draw_confirmation_window(f: &mut Frame, prompt: &mut Prompt) {
     let window = window_from_dimensions(20, 70, f.area());
-    let prompt = ConfirmationPrompt::new(app, context);
     f.render_widget(prompt, window);
 }
 
-pub struct ConfirmationPrompt {
-    title: String,
-    body: Vec<String>,
+#[derive(Clone, Copy, Debug)]
+pub enum Context {
+    Deletion,
+    Replacing,
+    ProfileDeletion,
 }
 
-impl ConfirmationPrompt {
-    pub fn new(app: &App, context: ConfirmationContext) -> Self {
+pub struct Prompt {
+    title: String,
+    body: Vec<String>,
+    pub context: Context,
+    pub scroller: Scroller,
+}
+
+impl Prompt {
+    pub fn new(app: &App, context: Context) -> Self {
         let title = match context {
-            ConfirmationContext::Deletion => {
+            Context::Deletion => {
                 let (count, postfix) = if app.tree_state.marked.is_empty() {
                     (1, "")
                 } else {
@@ -30,25 +42,23 @@ impl ConfirmationPrompt {
                 };
                 format!("Permanently delete {count} selected file{postfix}")
             }
-            ConfirmationContext::Replacing => "Overwrite the selected file".to_owned(),
-            ConfirmationContext::ProfileDeletion => {
-                "Permanently delete the selected profile".to_owned()
-            }
+            Context::Replacing => "Overwrite the selected file".to_owned(),
+            Context::ProfileDeletion => "Permanently delete the selected profile".to_owned(),
         };
 
         let profile = app.profiles.get_profile().unwrap();
 
         let body = match context {
-            ConfirmationContext::Deletion if !app.tree_state.marked.is_empty() => app
+            Context::Deletion if !app.tree_state.marked.is_empty() => app
                 .tree_state
                 .marked
                 .iter()
                 .map(|id| profile.rel_path_to(&profile.entries[*id].path))
                 .collect(),
-            ConfirmationContext::Deletion | ConfirmationContext::Replacing => {
+            Context::Deletion | Context::Replacing => {
                 vec![profile.rel_path_to(&app.selected_entry().unwrap().path)]
             }
-            ConfirmationContext::ProfileDeletion => {
+            Context::ProfileDeletion => {
                 vec![(app.profiles.inner)
                     .get_selected()
                     .unwrap()
@@ -57,19 +67,24 @@ impl ConfirmationPrompt {
             }
         };
 
-        Self { title, body }
+        Self {
+            title,
+            body,
+            context,
+            scroller: Scroller::default(),
+        }
     }
 }
 
-impl Widget for ConfirmationPrompt {
-    fn render(self, area: Rect, buf: &mut ratatui::prelude::Buffer)
+impl Widget for &mut Prompt {
+    fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,
     {
         Clear.render(area, buf);
 
         Block::bordered()
-            .title(Line::styled(self.title, THEME.confirmation_border))
+            .title(Line::styled(self.title.clone(), THEME.confirmation_border))
             .border_type(BorderType::Rounded)
             .border_style(THEME.confirmation_border)
             .title_alignment(Alignment::Center)
@@ -79,12 +94,29 @@ impl Widget for ConfirmationPrompt {
             .margin(1)
             .areas(area);
 
-        let mut text = Paragraph::new(self.body.into_iter().map(Line::from).collect::<Vec<Line>>())
-            .block(
-                Block::default()
-                    .borders(Borders::BOTTOM)
-                    .border_style(THEME.confirmation_border),
-            );
+        let block = Block::default()
+            .borders(Borders::BOTTOM)
+            .border_style(THEME.confirmation_border);
+        let inner_body_area = block.inner(body_area);
+
+        let body = self
+            .body
+            .iter()
+            .map(String::as_str)
+            .map(Line::from)
+            .collect::<Vec<_>>();
+
+        let offset = self.scroller.offset(inner_body_area, &body);
+
+        let mut scrollbar_state =
+            ScrollbarState::new(self.scroller.length()).position(offset.into());
+        Scrollbar::new(ScrollbarOrientation::VerticalRight).render(
+            inner_body_area.offset(Offset { x: 1, y: 0 }),
+            buf,
+            &mut scrollbar_state,
+        );
+
+        let mut text = Paragraph::new(body).scroll((offset, 0)).block(block);
 
         if body_area.width > 0 {
             text = text.wrap(Wrap { trim: false });

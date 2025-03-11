@@ -1,5 +1,5 @@
 use super::MergeConfig;
-use crate::commands::{Command, HelpCommand, ProfileSelectionCommand};
+use crate::commands::{Command, ConfirmationCommand, HelpCommand, ProfileSelectionCommand};
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use indexmap::IndexMap;
@@ -15,6 +15,7 @@ pub struct UserKeyBindings {
     general: Option<HashMap<String, String>>,
     profile_selection: Option<HashMap<String, String>>,
     help: Option<HashMap<String, String>>,
+    confirmation: Option<HashMap<String, String>>,
 }
 
 fn parse_binding(binding: &str) -> Result<KeyEvent> {
@@ -74,6 +75,7 @@ pub struct KeyBindings {
     pub general: IndexMap<KeyEvent, Command>,
     pub profile_selection: IndexMap<KeyEvent, ProfileSelectionCommand>,
     pub help: IndexMap<KeyEvent, HelpCommand>,
+    pub confirmation: IndexMap<KeyEvent, ConfirmationCommand>,
 }
 
 impl Default for KeyBindings {
@@ -82,6 +84,7 @@ impl Default for KeyBindings {
         let mut general = IndexMap::new();
         let mut profile_selection = IndexMap::new();
         let mut help = IndexMap::new();
+        let mut confirmation = IndexMap::new();
 
         macro_rules! insert_binding {
             ($map: expr, $key: expr, $command: expr) => {
@@ -144,10 +147,20 @@ impl Default for KeyBindings {
         insert_binding!(help, "G", HelpCommand::GoToBottom);
         insert_binding!(help, "esc", HelpCommand::Abort);
 
+        insert_binding!(confirmation, "y", ConfirmationCommand::Confirm);
+        insert_binding!(confirmation, "enter", ConfirmationCommand::Confirm);
+        insert_binding!(confirmation, "n", ConfirmationCommand::Cancel);
+        insert_binding!(confirmation, "esc", ConfirmationCommand::Cancel);
+        insert_binding!(confirmation, "ctrl-y", ConfirmationCommand::ScrollUp);
+        insert_binding!(confirmation, "ctrl-e", ConfirmationCommand::ScrollDown);
+        insert_binding!(confirmation, "g", ConfirmationCommand::GoToTop);
+        insert_binding!(confirmation, "G", ConfirmationCommand::GoToBottom);
+
         Self {
             general,
             profile_selection,
             help,
+            confirmation,
         }
     }
 }
@@ -196,6 +209,10 @@ impl MergeConfig for KeyBindings {
             set_bindings(&mut self.help, &bindings)?;
         }
 
+        if let Some(bindings) = user_key_bindings.confirmation {
+            set_bindings(&mut self.confirmation, &bindings)?;
+        }
+
         Ok(())
     }
 }
@@ -227,10 +244,12 @@ mod tests {
             general,
             profile_selection,
             help,
+            confirmation,
         } = user_config.key_bindings.unwrap();
 
         assert!(general.is_some_and(|keys| keys.len() == default.general.len()));
         assert!(profile_selection.is_some_and(|keys| keys.len() == default.profile_selection.len()));
         assert!(help.is_some_and(|keys| keys.len() == default.help.len()));
+        assert!(confirmation.is_some_and(|keys| keys.len() == default.confirmation.len()));
     }
 }

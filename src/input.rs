@@ -1,12 +1,13 @@
 use crate::{
     app::App,
-    commands::{Command, HelpCommand, ProfileSelectionCommand},
+    commands::{Command, ConfirmationCommand, HelpCommand, ProfileSelectionCommand},
     config::{KEY_BINDINGS, OPTIONS},
     fuzzy_finder::FuzzyFinder,
     help::Help,
     message::set_msg_if_error,
     profile::Profiles,
     search::Direction,
+    ui::confirmation::{Context as ConfirmationContext, Prompt},
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use std::ops::RangeBounds;
@@ -17,7 +18,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 pub enum Mode {
     #[default]
     Normal,
-    Confirmation(ConfirmationContext),
+    Confirmation(Prompt),
     EntryRenaming,
     ProfileSelection,
     ProfileCreation,
@@ -29,7 +30,7 @@ pub enum Mode {
 impl Mode {
     pub fn select_previous(&mut self) {
         *self = match self {
-            Mode::Confirmation(confirmation_context) => match confirmation_context {
+            Mode::Confirmation(prompt) => match prompt.context {
                 ConfirmationContext::Deletion | ConfirmationContext::Replacing => Mode::Normal,
                 ConfirmationContext::ProfileDeletion => Mode::ProfileSelection,
             },
@@ -51,13 +52,13 @@ impl Mode {
             _ => unreachable!(),
         }
     }
-}
 
-#[derive(Clone, Copy, Debug)]
-pub enum ConfirmationContext {
-    Deletion,
-    Replacing,
-    ProfileDeletion,
+    pub fn confirmation_context(&self) -> ConfirmationContext {
+        match self {
+            Mode::Confirmation(prompt) => prompt.context,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Default, Copy, Clone)]
@@ -280,10 +281,10 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
         return handle_key_help_mode(key, &mut app.help);
     }
 
-    match app.mode {
+    match &app.mode {
         Mode::Normal if !app.fuzzy_finder.is_active() => return handle_key_normal_mode(key, app),
         Mode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
-        Mode::Confirmation(context) => handle_key_confirmation_mode(key, app, context),
+        Mode::Confirmation(_) => return handle_key_confirmation_mode(key, app),
         _ => handle_key_editing_mode(key, app),
     }
 
@@ -368,22 +369,22 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
     false
 }
 
-fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut Help) -> bool {
+fn handle_key_help_mode(key: KeyEvent, help: &mut Help) -> bool {
     if let Some(command) = KEY_BINDINGS.help.get(&key) {
         match command {
-            HelpCommand::ScrollUp => help_window_state.scroll_up(),
-            HelpCommand::ScrollDown => help_window_state.scroll_down(),
-            HelpCommand::GoToTop => help_window_state.scroll_top(),
-            HelpCommand::GoToBottom => help_window_state.scroll_bottom(),
-            HelpCommand::Abort => help_window_state.toggle(),
+            HelpCommand::ScrollUp => help.scroller.scroll_up(),
+            HelpCommand::ScrollDown => help.scroller.scroll_down(),
+            HelpCommand::GoToTop => help.scroller.scroll_top(),
+            HelpCommand::GoToBottom => help.scroller.scroll_bottom(),
+            HelpCommand::Abort => help.toggle(),
         }
     } else if let Some(command) = KEY_BINDINGS.get(&key) {
         match command {
-            Command::OnDown => help_window_state.scroll_down(),
-            Command::OnUp => help_window_state.scroll_up(),
-            Command::SelectFirst => help_window_state.scroll_top(),
-            Command::SelectLast => help_window_state.scroll_bottom(),
-            Command::ToggleHelp => help_window_state.toggle(),
+            Command::OnDown => help.scroller.scroll_down(),
+            Command::OnUp => help.scroller.scroll_up(),
+            Command::SelectFirst => help.scroller.scroll_top(),
+            Command::SelectLast => help.scroller.scroll_bottom(),
+            Command::ToggleHelp => help.toggle(),
             Command::Quit => return true,
             _ => (),
         }
@@ -392,12 +393,32 @@ fn handle_key_help_mode(key: KeyEvent, help_window_state: &mut Help) -> bool {
     false
 }
 
-fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App, context: ConfirmationContext) {
-    match key.code {
-        KeyCode::Char('y') => app.on_confirmation(context),
-        KeyCode::Char('n') => app.mode.select_previous(),
-        _ => (),
+fn handle_key_confirmation_mode(key: KeyEvent, app: &mut App) -> bool {
+    let Mode::Confirmation(prompt) = &mut app.mode else {
+        unreachable!();
+    };
+
+    if let Some(command) = KEY_BINDINGS.confirmation.get(&key) {
+        match command {
+            ConfirmationCommand::Confirm => app.on_confirmation(),
+            ConfirmationCommand::Cancel => app.mode.select_previous(),
+            ConfirmationCommand::ScrollUp => prompt.scroller.scroll_up(),
+            ConfirmationCommand::ScrollDown => prompt.scroller.scroll_down(),
+            ConfirmationCommand::GoToTop => prompt.scroller.scroll_top(),
+            ConfirmationCommand::GoToBottom => prompt.scroller.scroll_bottom(),
+        }
+    } else if let Some(command) = KEY_BINDINGS.get(&key) {
+        match command {
+            Command::OnDown => prompt.scroller.scroll_down(),
+            Command::OnUp => prompt.scroller.scroll_up(),
+            Command::SelectFirst => prompt.scroller.scroll_top(),
+            Command::SelectLast => prompt.scroller.scroll_bottom(),
+            Command::Quit => return true,
+            _ => (),
+        }
     }
+
+    false
 }
 
 pub fn handle_key_fuzzy_mode(key: KeyEvent, fuzzy_finder: &mut FuzzyFinder) {

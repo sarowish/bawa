@@ -56,8 +56,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         draw_help(f, &mut app.help);
     }
 
-    if let Mode::Confirmation(context) = app.mode {
-        draw_confirmation_window(f, app, context);
+    if let Mode::Confirmation(ref mut prompt) = app.mode {
+        draw_confirmation_window(f, prompt);
     }
 }
 
@@ -162,7 +162,9 @@ fn draw_help(f: &mut Frame, help: &mut Help) {
     let window = window_from_dimensions(45, 80, f.area());
     f.render_widget(Clear, window);
 
-    let width = std::cmp::max(window.width.saturating_sub(2), 1);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(Span::styled("Help", THEME.title));
 
     let help_entries = help
         .bindings
@@ -170,21 +172,11 @@ fn draw_help(f: &mut Frame, help: &mut Help) {
         .map(|(key, desc)| Line::from(vec![Span::styled(key, THEME.help), Span::raw(*desc)]))
         .collect::<Vec<Line>>();
 
-    help.max_scroll = help_entries
-        .iter()
-        .map(|entry| 1 + entry.width().saturating_sub(1) as u16 / width)
-        .sum::<u16>()
-        .saturating_sub(window.height - 2);
+    let offset = help.scroller.offset(block.inner(window), &help_entries);
 
-    if help.max_scroll < help.scroll {
-        help.scroll = help.max_scroll;
-    }
-
-    let mut help_text = Paragraph::new(help_entries).scroll((help.scroll, 0)).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(Span::styled("Help", THEME.title)),
-    );
+    let mut help_text = Paragraph::new(help_entries)
+        .scroll((offset, 0))
+        .block(block);
 
     if window.width > 0 {
         help_text = help_text.wrap(Wrap { trim: false });

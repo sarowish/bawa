@@ -1,4 +1,4 @@
-use crate::config::KEY_BINDINGS;
+use crate::{config::KEY_BINDINGS, ui::Scroller};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 
@@ -155,28 +155,11 @@ impl Deref for Bindings {
 pub struct Help {
     pub bindings: Bindings,
     pub visible: bool,
-    pub scroll: u16,
-    pub max_scroll: u16,
+    pub scroller: Scroller,
 }
 
 impl Help {
     pub fn toggle(&mut self) {
         self.visible = !self.visible;
-    }
-
-    pub fn scroll_up(&mut self) {
-        self.scroll = self.scroll.saturating_sub(1);
-    }
-
-    pub fn scroll_down(&mut self) {
-        self.scroll = std::cmp::min(self.scroll + 1, self.max_scroll);
-    }
-
-    pub fn scroll_top(&mut self) {
-        self.scroll = 0;
-    }
-
-    pub fn scroll_bottom(&mut self) {
-        self.scroll = self.max_scroll;
     }
 }
