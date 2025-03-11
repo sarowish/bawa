@@ -38,8 +38,10 @@ pub fn get_config_dir() -> Result<PathBuf> {
 pub fn validate_name(path: &mut PathBuf) {
     while path.exists() {
         path.set_file_name(format!(
-            "{} (dup)",
-            path.file_name().unwrap().to_string_lossy()
+            "{} (dup){}",
+            path.file_stem().unwrap().to_string_lossy(),
+            path.extension()
+                .map_or(String::new(), |ext| format!(".{}", ext.to_string_lossy()))
         ));
     }
 }
