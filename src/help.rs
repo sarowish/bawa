@@ -43,10 +43,10 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
 
 const PROFILE_SELECTION_DESCRIPTIONS_LEN: usize = 5;
 const PROFILE_SELECTION_DESCRIPTIONS: [&str; PROFILE_SELECTION_DESCRIPTIONS_LEN] = [
-    " - Create profile, ",
-    " - Rename profile, ",
-    " - Delete profile, ",
-    " - Select profile, ",
+    " - Create, ",
+    " - Rename, ",
+    " - Delete, ",
+    " - Select, ",
     " - Abort",
 ];
 
