@@ -156,6 +156,7 @@ impl App {
         let idx = self.search.start_idx.take();
         self.jump_to_match(idx);
         self.search.pattern.clear();
+        self.message.clear();
     }
 
     pub fn repeat_search(&mut self) {
