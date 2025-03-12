@@ -1,14 +1,16 @@
-use crate::{
-    app::App,
-    config::OPTIONS,
-    input::{Mode, SearchContext},
-    tree::NodeId,
-};
+use crate::{app::App, config::OPTIONS, input::Mode, tree::NodeId};
 use anyhow::Result;
 use nucleo_matcher::{
     pattern::{AtomKind, CaseMatching, Normalization, Pattern},
     Matcher, Utf32String,
 };
+
+#[derive(Default, Copy, Clone)]
+pub enum Context {
+    #[default]
+    Normal,
+    ProfileSelection,
+}
 
 pub enum Direction {
     Forward,
@@ -106,14 +108,14 @@ impl App {
         }
 
         let items: Vec<_> = match self.mode.search_context() {
-            SearchContext::Normal => {
+            Context::Normal => {
                 let entries = self.profiles.get_entries().unwrap();
                 entries
                     .visible(NodeId::root())
                     .map(|id| Utf32String::from(entries[id].to_string()))
                     .collect()
             }
-            SearchContext::ProfileSelection => self
+            Context::ProfileSelection => self
                 .profiles
                 .inner
                 .items
@@ -168,26 +170,26 @@ impl App {
 
     fn get_search_start_position(&mut self) -> Option<usize> {
         match self.mode.search_context() {
-            SearchContext::Normal => self.tree_state.selected.and_then(|selected| {
+            Context::Normal => self.tree_state.selected.and_then(|selected| {
                 self.profiles
                     .get_entries()
                     .unwrap()
                     .visible(NodeId::root())
                     .position(|id| id == selected)
             }),
-            SearchContext::ProfileSelection => self.profiles.inner.state.selected(),
+            Context::ProfileSelection => self.profiles.inner.state.selected(),
         }
     }
 
     pub fn jump_to_match(&mut self, idx: Option<usize>) {
         if let Some(idx) = idx {
             match self.mode.search_context() {
-                SearchContext::Normal => {
+                Context::Normal => {
                     let mut visible = self.profiles.get_entries().unwrap().visible(NodeId::root());
                     self.tree_state.select_unchecked(visible.nth(idx));
                     self.auto_mark_save_file();
                 }
-                SearchContext::ProfileSelection => self.profiles.inner.state.select(Some(idx)),
+                Context::ProfileSelection => self.profiles.inner.state.select(Some(idx)),
             };
         }
     }

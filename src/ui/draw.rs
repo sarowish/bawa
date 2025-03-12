@@ -4,8 +4,9 @@ use crate::{
     config::THEME,
     fuzzy_finder::FuzzyFinder,
     help::Help,
-    input::{Mode, SearchContext},
+    input::Mode,
     message::Kind as MessageKind,
+    search::Context as SearchContext,
     tree::widget::Tree,
 };
 use ratatui::{
@@ -16,6 +17,7 @@ use ratatui::{
     Frame,
 };
 use std::fmt::Display;
+use unicode_width::UnicodeWidthStr;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let main_layout = if app.footer_input.is_some() || !app.message.is_empty() {
@@ -86,7 +88,7 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
 pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Rect) {
     f.render_widget(Clear, area);
 
-    let [search_bar_area, results_area] =
+    let [mut search_bar_area, results_area] =
         Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(area);
 
     let search_block = Block::default()
@@ -95,18 +97,21 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
         .border_type(BorderType::Rounded);
 
     f.render_widget(&search_block, search_bar_area);
+    search_bar_area = search_block.inner(search_bar_area);
 
     let [prompt_area, input_area, mut counter_area] = Layout::horizontal([
         Constraint::Length(fuzzy_finder.input.cursor_offset),
-        Constraint::Length(fuzzy_finder.input.text.len() as u16),
+        Constraint::Length(fuzzy_finder.input.text.width() as u16),
         Constraint::Fill(1),
     ])
-    .areas(search_block.inner(search_bar_area));
+    .areas(search_bar_area);
 
     let prompt = Paragraph::new(fuzzy_finder.input.prompt.clone()).style(THEME.fuzzy_prompt);
     f.render_widget(prompt, prompt_area);
 
-    let input = Paragraph::new(fuzzy_finder.input.text.clone());
+    fuzzy_finder.input.update_width(search_bar_area.width);
+
+    let input = Paragraph::new(fuzzy_finder.input.to_string());
     set_cursor(f, &fuzzy_finder.input, prompt_area);
     f.render_widget(input, input_area);
 
@@ -263,14 +268,15 @@ fn draw_list_with_help<T: Display>(
     f.render_widget(help_widget, help_area);
 }
 
-fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
-    let line = if let Some(input) = &app.footer_input {
+fn draw_footer(f: &mut Frame, app: &mut App, area: Rect) {
+    let line = if let Some(input) = &mut app.footer_input {
         set_cursor(f, input, area);
+        input.update_width(area.width);
         let prompt = Span::raw(&input.prompt);
         let text = if matches!(app.mode, Mode::Search(_)) && app.search.no_match() {
-            Span::styled(&input.text, THEME.error)
+            Span::styled(input.to_string(), THEME.error)
         } else {
-            Span::raw(&input.text)
+            Span::raw(input.to_string())
         };
         Line::from(vec![prompt, text])
     } else if !app.message.is_empty() {

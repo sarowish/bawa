@@ -29,7 +29,7 @@ impl Default for FuzzyFinder {
     fn default() -> Self {
         Self {
             matcher: Matcher::new(Config::DEFAULT.match_paths()),
-            input: Input::with_prompt("> "),
+            input: Input::new("> "),
             pattern: Pattern::default(),
             picker: None,
             matched: StatefulList::with_items(Vec::new()),
