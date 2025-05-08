@@ -449,6 +449,8 @@ impl App {
         } else {
             return;
         };
+
+        set_msg_if_error!(self.message, profile.write_state());
     }
 
     pub fn move_down(&mut self) {
