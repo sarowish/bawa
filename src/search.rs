@@ -229,7 +229,7 @@ impl App {
                     _ => unreachable!(),
                 }
                 .select(Some(idx)),
-            };
+            }
         }
     }
 }

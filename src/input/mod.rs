@@ -91,7 +91,7 @@ impl Input {
             return;
         }
 
-        let (offset, ch) = self.text[..self.idx].grapheme_indices(true).last().unwrap();
+        let (offset, ch) = self.text[..self.idx].grapheme_indices(true).next_back().unwrap();
         self.cursor_position -= ch.width() as u16;
         self.clear_range(offset..self.idx);
         self.idx = offset;
@@ -103,7 +103,7 @@ impl Input {
             return;
         }
 
-        let (offset, ch) = self.text[..self.idx].grapheme_indices(true).last().unwrap();
+        let (offset, ch) = self.text[..self.idx].grapheme_indices(true).next_back().unwrap();
         self.cursor_position -= ch.width() as u16;
         self.idx = offset;
         self.check_lower_bound();
@@ -127,7 +127,7 @@ impl Input {
     fn move_cursor_one_word_left(&mut self) {
         let idx = self.text[..self.idx]
             .unicode_word_indices()
-            .last()
+            .next_back()
             .map_or(0, |(offset, _)| offset);
         self.cursor_position -= self.text[idx..self.idx].width() as u16;
         self.idx = idx;

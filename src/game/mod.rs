@@ -137,7 +137,7 @@ impl Game {
     pub fn select_profile(&mut self) -> Result<bool> {
         if self.profiles.get_selected().is_none() {
             return Err(anyhow::anyhow!("Can't select profile"));
-        };
+        }
 
         if let Some(idx) = self.active_profile {
             if matches!(self.profiles.state.selected(), Some(selected_idx) if idx == selected_idx) {
@@ -221,7 +221,7 @@ impl HandleFileSystemEvent for Game {
             if matches!(self.active_profile, Some(active_idx) if active_idx == idx) {
                 self.update_active_profile(None)?;
             }
-        };
+        }
 
         Ok(())
     }
@@ -292,7 +292,7 @@ impl Games {
     pub fn select_game(&mut self) -> Result<bool> {
         if self.inner.get_selected().is_none() {
             return Err(anyhow::anyhow!("Can't select game"));
-        };
+        }
 
         if let Some(idx) = self.active_game {
             if matches!(self.inner.state.selected(), Some(selected_idx) if idx == selected_idx) {
@@ -391,7 +391,7 @@ impl HandleFileSystemEvent for Games {
             if matches!(self.active_game, Some(active_idx) if active_idx == idx) {
                 self.active_game = None;
             }
-        };
+        }
 
         Ok(())
     }

@@ -242,7 +242,7 @@ fn select_game_by_idx_or_name(games: &mut Games, args: &ArgMatches) -> Result<()
             if idx.is_none() {
                 return Err(anyhow::anyhow!("No game with the name \"{}\".", name));
             }
-        };
+        }
     }
 
     if idx.is_some() {
@@ -268,7 +268,7 @@ fn select_profile_by_idx_or_name(game: &mut Game, args: &ArgMatches) -> Result<(
             if idx.is_none() {
                 return Err(anyhow::anyhow!("No profile with the name \"{}\".", name));
             }
-        };
+        }
     }
 
     if idx.is_some() {

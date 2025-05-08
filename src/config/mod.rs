@@ -64,7 +64,7 @@ impl Config {
         if let Some(Ok(user_config)) = &config_str {
             let user_config = toml::from_str::<UserConfig>(user_config)?;
             config.merge(user_config)?;
-        };
+        }
 
         Ok(config)
     }

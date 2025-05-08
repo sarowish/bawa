@@ -423,7 +423,7 @@ impl App {
                 || std::fs::rename(&entry.path, new_path).is_err()
             {
                 fail = true;
-            };
+            }
         }
 
         if fail {
@@ -443,12 +443,12 @@ impl App {
         if let Some(swap_with) = entries[id].previous_sibling() {
             entries.detach(id);
             entries.insert_before(swap_with, id);
-        } else if let Some(swap_with) = entries.following_siblings(id).last() {
+        } else if let Some(swap_with) = entries.following_siblings(id).next_back() {
             entries.detach(id);
             entries.insert_after(swap_with, id);
         } else {
             return;
-        };
+        }
 
         set_msg_if_error!(self.message, profile.write_state());
     }
@@ -464,12 +464,12 @@ impl App {
         if let Some(swap_with) = entries[id].next_sibling() {
             entries.detach(id);
             entries.insert_after(swap_with, id);
-        } else if let Some(swap_with) = entries.preceding_siblings(id).last() {
+        } else if let Some(swap_with) = entries.preceding_siblings(id).next_back() {
             entries.detach(id);
             entries.insert_before(swap_with, id);
         } else {
             return;
-        };
+        }
 
         set_msg_if_error!(self.message, profile.write_state());
     }
@@ -569,7 +569,7 @@ impl App {
             }
         } else {
             self.select_first();
-        };
+        }
     }
 
     pub fn down_directory(&mut self) {
@@ -589,7 +589,7 @@ impl App {
             }
         } else {
             self.select_last();
-        };
+        }
     }
 
     pub fn load_save_file(&mut self, path: &Path, mark_as_active: bool) -> Result<()> {
@@ -624,7 +624,7 @@ impl App {
         } else {
             self.message
                 .set_warning("No active save file exists for the selected profile.");
-        };
+        }
     }
 
     pub fn mark_selected_save_file(&mut self) {
@@ -654,7 +654,7 @@ impl App {
 
         set_msg_if_error!(
             self.message,
-            std::fs::copy(&save_file_path, &path).map_err(|err| err.into())
+            std::fs::copy(&save_file_path, &path).map_err(Into::into)
         );
     }
 
@@ -677,7 +677,7 @@ impl App {
             }
         } else {
             self.fuzzy_finder.set_picker(Local::new(self));
-        };
+        }
 
         self.fuzzy_finder.update_matches();
     }

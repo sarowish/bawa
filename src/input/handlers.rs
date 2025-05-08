@@ -376,7 +376,7 @@ fn handle_key_editing_mode(key: KeyEvent, app: &mut App) {
                     app.search.pattern = app.footer_input.as_ref().unwrap().text.clone();
                     app.run_search(Direction::Forward);
                 }
-            };
+            }
         }
     }
 }

@@ -74,7 +74,7 @@ pub fn entry_completer(current: &OsStr) -> Vec<CompletionCandidate> {
                 );
             }
         }
-    };
+    }
 
     candidates
 }
