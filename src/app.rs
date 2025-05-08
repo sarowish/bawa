@@ -291,6 +291,7 @@ impl App {
             ConfirmationContext::Deletion if self.tree_state.selected.is_none() => {}
             ConfirmationContext::Replacing if matches!(self.selected_entry(), Some(entry) if entry.is_folder()) =>
                 {}
+            ConfirmationContext::GameDeletion if self.games.inner.state.selected().is_none() => {}
             ConfirmationContext::ProfileDeletion
                 if self.games.get_profiles().state.selected().is_none() => {}
             _ => self.mode = Mode::Confirmation(Prompt::new(self, context)),

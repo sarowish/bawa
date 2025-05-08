@@ -95,17 +95,21 @@ fn handle_key_game_selection_mode(key: KeyEvent, app: &mut App) -> bool {
                 app.take_input(Mode::GameCreation);
             }
             GameSelectionCommand::Rename => {
-                let text = games.get_selected().unwrap().name().into_owned();
-                app.take_input(Mode::GameRenaming);
-                app.footer_input.as_mut().unwrap().set_text(&text);
+                if let Some(game) = games.get_selected() {
+                    let name = game.name().into_owned();
+                    app.take_input(Mode::GameRenaming);
+                    app.footer_input.as_mut().unwrap().set_text(&name);
+                }
             }
             GameSelectionCommand::Delete => {
                 app.prompt_for_confirmation(ConfirmationContext::GameDeletion);
             }
             GameSelectionCommand::Select => app.confirm_game_selection(),
             GameSelectionCommand::SetSavefile => {
-                app.mode = Mode::GameCreation;
-                app.game_creation = CreatingGame::edit_path();
+                if games.get_selected().is_some() {
+                    app.mode = Mode::GameCreation;
+                    app.game_creation = CreatingGame::edit_path();
+                }
             }
             GameSelectionCommand::Abort => abort(app),
         }
@@ -118,7 +122,9 @@ fn handle_key_game_selection_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::EnterSearch => app.search_new_pattern(),
             Command::RepeatLastSearch => app.repeat_search(),
             Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
-            Command::OpenProfileWindow => app.open_profile_window(),
+            Command::OpenProfileWindow if app.games.get_game().is_some() => {
+                app.open_profile_window();
+            }
             Command::Quit => return true,
             _ => (),
         }
@@ -267,9 +273,11 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
         match command {
             ProfileSelectionCommand::Create => app.take_input(Mode::ProfileCreation),
             ProfileSelectionCommand::Rename => {
-                let text = profiles.get_selected().unwrap().name().into_owned();
-                app.take_input(Mode::ProfileRenaming);
-                app.footer_input.as_mut().unwrap().set_text(&text);
+                if let Some(profile) = profiles.get_selected() {
+                    let name = profile.name().into_owned();
+                    app.take_input(Mode::ProfileRenaming);
+                    app.footer_input.as_mut().unwrap().set_text(&name);
+                }
             }
             ProfileSelectionCommand::Delete => {
                 app.prompt_for_confirmation(ConfirmationContext::ProfileDeletion);
