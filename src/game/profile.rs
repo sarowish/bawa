@@ -86,8 +86,7 @@ impl Profile {
     pub fn get_file_rel_paths(&self, include_folders: bool) -> Vec<String> {
         let mut paths = Vec::new();
 
-        for id in self.entries.iter_ids() {
-            let entry = &self.entries[id];
+        for entry in self.entries.iter_nodes().skip(1) {
             if include_folders || entry.is_file() {
                 let mut path = self.rel_path_to(&entry.path);
 
