@@ -4,7 +4,7 @@ use notify::{
     event::{Event as NotifyEvent, ModifyKind, RenameMode},
     EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
 };
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::UnboundedSender;
 
 pub struct Watcher(pub RecommendedWatcher);
@@ -31,7 +31,7 @@ impl Watcher {
                 }
 
                 let file_name = event.paths[0].file_name().unwrap().to_string_lossy();
-                if file_name.starts_with('_') || file_name == "active_profile" {
+                if file_name.starts_with('_') || file_name == "active_game" {
                     *RENAME_FROM.lock().unwrap() = None;
                     return;
                 }
@@ -62,7 +62,7 @@ impl Watcher {
                 }
 
                 let file_name = event.paths[0].file_name().unwrap().to_string_lossy();
-                if file_name.starts_with('_') || file_name == "active_profile" {
+                if file_name.starts_with('_') || file_name == "active_game" {
                     return;
                 }
 
@@ -73,11 +73,11 @@ impl Watcher {
         Ok(Self(watcher))
     }
 
-    pub fn watch_profile_entries(&mut self, path: &Path) {
+    pub fn watch_recursive(&mut self, path: &Path) {
         self.0.watch(path, RecursiveMode::Recursive).unwrap();
     }
 
-    pub fn watch_profiles(&mut self, path: &Path) {
+    pub fn watch_non_recursive(&mut self, path: &Path) {
         self.0.watch(path, RecursiveMode::NonRecursive).unwrap();
     }
 
@@ -94,6 +94,7 @@ pub struct FileSystemEvent {
 
 #[derive(PartialEq, Eq)]
 pub enum Context {
+    Game,
     Profile,
     Entry,
 }
@@ -108,13 +109,16 @@ impl FileSystemEvent {
     #[cfg(windows)]
     fn from_modify(event: NotifyEvent, from: &Path) -> Self {
         let kind = Kind::Rename(event.paths[0].clone());
-        let context = if utils::get_relative_path(&utils::get_state_dir().unwrap(), from)
+
+        let count = utils::get_relative_path(&utils::get_state_dir().unwrap(), from)
             .unwrap()
-            .contains(MAIN_SEPARATOR)
-        {
-            Context::Entry
-        } else {
-            Context::Profile
+            .iter()
+            .count();
+
+        let context = match count {
+            1 => Context::Game,
+            2 => Context::Profile,
+            _ => Context::Entry,
         };
 
         Self {
@@ -136,13 +140,15 @@ impl From<NotifyEvent> for FileSystemEvent {
 
         let path = value.paths[0].clone();
 
-        let context = if utils::get_relative_path(&utils::get_state_dir().unwrap(), &path)
+        let count = utils::get_relative_path(&utils::get_state_dir().unwrap(), &path)
             .unwrap()
-            .contains(MAIN_SEPARATOR)
-        {
-            Context::Entry
-        } else {
-            Context::Profile
+            .iter()
+            .count();
+
+        let context = match count {
+            1 => Context::Game,
+            2 => Context::Profile,
+            _ => Context::Entry,
         };
 
         Self {

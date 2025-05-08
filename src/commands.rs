@@ -25,7 +25,8 @@ pub enum Command {
     MoveDown,
     OpenAllFolds,
     CloseAllFolds,
-    SelectProfile,
+    OpenGameWindow,
+    OpenProfileWindow,
     ToggleHelp,
     EnterSearch,
     RepeatLastSearch,
@@ -67,7 +68,8 @@ impl TryFrom<&str> for Command {
             "move_down" => Command::MoveDown,
             "open_all_folds" => Command::OpenAllFolds,
             "close_all_folds" => Command::CloseAllFolds,
-            "select_profile" => Command::SelectProfile,
+            "open_game_window" => Command::OpenGameWindow,
+            "open_profile_window" => Command::OpenProfileWindow,
             "toggle_help" => Command::ToggleHelp,
             "enter_search" => Command::EnterSearch,
             "repeat_last_search" => Command::RepeatLastSearch,
@@ -77,6 +79,34 @@ impl TryFrom<&str> for Command {
             "mark_entry" => Command::MarkEntry,
             "reset" => Command::Reset,
             "quit" => Command::Quit,
+            _ => anyhow::bail!("\"{}\" is an invalid command", command),
+        };
+
+        Ok(command)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum GameSelectionCommand {
+    Create,
+    Rename,
+    Delete,
+    SetSavefile,
+    Select,
+    Abort,
+}
+
+impl TryFrom<&str> for GameSelectionCommand {
+    type Error = anyhow::Error;
+
+    fn try_from(command: &str) -> Result<Self, Self::Error> {
+        let command = match command {
+            "create" => GameSelectionCommand::Create,
+            "rename" => GameSelectionCommand::Rename,
+            "delete" => GameSelectionCommand::Delete,
+            "set_savefile" => GameSelectionCommand::SetSavefile,
+            "select" => GameSelectionCommand::Select,
+            "abort" => GameSelectionCommand::Abort,
             _ => anyhow::bail!("\"{}\" is an invalid command", command),
         };
 

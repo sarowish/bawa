@@ -3,14 +3,14 @@ use crate::{
     app::{App, StatefulList},
     config::THEME,
     fuzzy_finder::FuzzyFinder,
+    game::creation::{CreatingGame, Step},
     help::Help,
     input::Mode,
     message::Kind as MessageKind,
-    search::Context as SearchContext,
     tree::widget::Tree,
 };
 use ratatui::{
-    layout::{Constraint, Layout, Margin, Rect},
+    layout::{Alignment, Constraint, Layout, Margin, Rect},
     style::Style,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
@@ -31,19 +31,24 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     draw_main(f, app, main_layout);
 
-    if matches!(
-        app.mode,
-        Mode::ProfileSelection
-            | Mode::ProfileCreation
-            | Mode::ProfileRenaming
-            | Mode::Search(SearchContext::ProfileSelection)
-    ) {
+    if app.mode.is_profile_selection() {
         draw_list_with_help(
             f,
-            "Profiles".to_owned(),
-            &mut app.profiles.inner,
+            format!("Profiles [{}]", app.games.get_game_unchecked().name()),
+            app.games.get_profiles_mut(),
             &app.help.bindings.profile_selection,
         );
+    } else if app.mode.is_game_selection() {
+        draw_list_with_help(
+            f,
+            "Games".to_owned(),
+            &mut app.games.inner,
+            &app.help.bindings.game_selection,
+        );
+
+        if app.mode.is_game_creation() {
+            draw_game_creation(f, &mut app.game_creation);
+        }
     }
 
     if app.fuzzy_finder.is_active() {
@@ -63,8 +68,61 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 }
 
+fn draw_game_creation(f: &mut Frame<'_>, state: &mut CreatingGame) {
+    match &mut state.step {
+        Step::EnterName | Step::EnterPath => (),
+        Step::PresetOrManual(use_preset) => {
+            let area = window_from_dimensions(10, 50, f.area());
+            f.render_widget(Clear, area);
+
+            let block = Block::bordered()
+                .title(Line::styled(
+                    "Path Selection Method",
+                    THEME.confirmation_border,
+                ))
+                .border_type(BorderType::Rounded)
+                .border_style(THEME.confirmation_border)
+                .title_alignment(Alignment::Center);
+
+            f.render_widget(&block, area);
+            let area = window_from_dimensions(1, area.width, block.inner(area));
+
+            let [manual_area, preset_area] =
+                Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)]).areas(area);
+
+            let manual = Paragraph::new(Line::styled(
+                "Manual",
+                if *use_preset {
+                    Style::default()
+                } else {
+                    THEME.confirmation_border
+                },
+            ))
+            .centered();
+            let preset = Paragraph::new(Line::styled(
+                "Preset",
+                if *use_preset {
+                    THEME.confirmation_border
+                } else {
+                    Style::default()
+                },
+            ))
+            .centered();
+
+            f.render_widget(manual, manual_area);
+            f.render_widget(preset, preset_area);
+        }
+        Step::Presets(presets) => draw_list_with_help(f, "Presets".to_owned(), presets, &[]),
+        Step::SaveFileLocations(paths) => draw_list_with_help(f, "Paths".to_owned(), paths, &[]),
+    }
+}
+
 fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
-    let Some(profile) = app.profiles.get_profile() else {
+    let Some(game) = app.games.get_game() else {
+        return;
+    };
+
+    let Some(profile) = game.get_profile() else {
         return;
     };
 
@@ -74,7 +132,7 @@ fn draw_main(f: &mut Frame, app: &mut App, area: Rect) {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .title(profile.name())
+                    .title(format!("{} [{}]", profile.name(), game.name()))
                     .title_style(THEME.title),
             )
             .highlight_style(THEME.selected)
@@ -216,7 +274,7 @@ fn draw_list_with_help<T: Display>(
     let help_text = Line::from(spans);
 
     let help_text_width = help_text.width();
-    let help_text_height = 1 + help_text_width as u16 / f.area().width;
+    let help_text_height = (help_text_width as u16).div_ceil(f.area().width);
 
     let max_width = item_texts
         .iter()

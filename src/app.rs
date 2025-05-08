@@ -6,10 +6,14 @@ use crate::{
         picker::{Global, Local},
         FuzzyFinder,
     },
+    game::{
+        creation::{CreatingGame, Step},
+        profile::Profile,
+        Games,
+    },
     help::Help,
     input::{self, Input, Mode},
     message::{set_msg_if_error, Message},
-    profile::{Profile, Profiles},
     search::Search,
     tree::{Node, NodeId, TreeState},
     ui::{
@@ -29,7 +33,7 @@ use std::path::{Path, PathBuf};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 pub struct App {
-    pub profiles: Profiles,
+    pub games: Games,
     pub tree_state: TreeState,
     pub footer_input: Option<Input>,
     pub mode: Mode,
@@ -37,6 +41,7 @@ pub struct App {
     pub message: Message,
     pub search: Search,
     pub fuzzy_finder: FuzzyFinder,
+    pub game_creation: CreatingGame,
     pub watcher: Watcher,
     rx: UnboundedReceiver<Event>,
 }
@@ -46,21 +51,22 @@ impl App {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut app = Self {
             message: Message::new(tx.clone()),
-            profiles: Profiles::new()?,
+            games: Games::new()?,
             tree_state: TreeState::default(),
             footer_input: None,
             mode: Mode::Normal,
             help: Help::default(),
             search: Search::default(),
             fuzzy_finder: FuzzyFinder::default(),
+            game_creation: CreatingGame::default(),
             watcher: Watcher::new(tx.clone())?,
             rx,
         };
 
-        if app.profiles.get_profile().is_some() {
+        if app.games.get_profile().is_some() {
             app.setup_state();
         } else {
-            app.select_profile();
+            app.open_game_window();
         }
 
         Ok(app)
@@ -71,10 +77,14 @@ impl App {
         let mut term_events = EventStream::new();
 
         self.auto_mark_save_file();
-        self.watcher.watch_profiles(&utils::get_state_dir()?);
+        self.watcher.watch_non_recursive(&utils::get_state_dir()?);
 
-        if let Some(profile) = self.profiles.get_profile() {
-            self.watcher.watch_profile_entries(&profile.path);
+        if let Some(game) = self.games.get_game() {
+            self.watcher.watch_non_recursive(&game.path);
+
+            if let Some(profile) = self.games.get_profile() {
+                self.watcher.watch_recursive(&profile.path);
+            }
         }
 
         loop {
@@ -95,6 +105,7 @@ impl App {
                 }
                 Event::FileSystem(event) => {
                     let res = match event.context {
+                        EventContext::Game => self.on_game_event(&event),
                         EventContext::Profile => self.on_profile_event(&event),
                         EventContext::Entry => self.handle_file_system_event(&event),
                     };
@@ -108,29 +119,48 @@ impl App {
         Ok(())
     }
 
-    fn on_profile_event(&mut self, event: &FileSystemEvent) -> Result<()> {
-        self.profiles.handle_file_system_event(event)?;
+    fn on_game_event(&mut self, event: &FileSystemEvent) -> Result<()> {
+        self.games.handle_file_system_event(event)?;
 
-        if let Some(profile) = self.profiles.get_profile() {
-            if let (true, EventKind::Rename(ref new_path)) =
-                (profile.path == event.path, &event.kind)
-            {
-                self.watcher.watch_profile_entries(new_path);
-            }
-        } else if self.profiles.get_profile().is_none() {
-            self.select_profile();
+        match self.games.get_game() {
+            Some(game) => match &event.kind {
+                EventKind::Rename(new_path) if *new_path == game.path => {
+                    self.watcher.watch_non_recursive(new_path);
+
+                    for profile in &game.profiles.items {
+                        self.watcher.watch_non_recursive(&profile.path);
+                    }
+                }
+                _ => (),
+            },
+            None => self.open_game_window(),
         }
 
         Ok(())
     }
 
-    fn setup_state(&mut self) {
-        let active_path = self
-            .profiles
-            .get_profile()
-            .and_then(Profile::get_active_save_file);
+    fn on_profile_event(&mut self, event: &FileSystemEvent) -> Result<()> {
+        self.games
+            .get_game_unchecked_mut()
+            .handle_file_system_event(event)?;
 
-        if let Some(entries) = self.profiles.get_entries_mut() {
+        match self.games.get_profile() {
+            Some(profile) => match &event.kind {
+                EventKind::Rename(new_path) if *new_path == profile.path => {
+                    self.watcher.watch_recursive(new_path);
+                }
+                _ => (),
+            },
+            None => self.open_profile_window(),
+        }
+        Ok(())
+    }
+
+    fn setup_state(&mut self) {
+        let profile = self.games.get_profile_mut();
+        let active_path = profile.as_deref().and_then(Profile::get_active_save_file);
+
+        if let Some(entries) = profile.map(|profile| &mut profile.entries) {
             self.tree_state = TreeState::default();
 
             for id in entries.iter_ids() {
@@ -149,30 +179,94 @@ impl App {
         }
     }
 
-    pub fn select_profile(&mut self) {
+    pub fn open_game_window(&mut self) {
+        self.footer_input = None;
+        self.fuzzy_finder.reset();
+        self.mode = Mode::GameSelection;
+    }
+
+    pub fn open_profile_window(&mut self) {
         self.footer_input = None;
         self.fuzzy_finder.reset();
         self.mode = Mode::ProfileSelection;
     }
 
-    pub fn confirm_profile_selection(&mut self) {
-        let old_path = self
-            .profiles
-            .get_profile()
-            .map(|profile| profile.path.clone());
+    pub fn confirm_game_selection(&mut self) {
+        let previous_game_path = self.games.get_game().map(|profile| profile.path.clone());
+        let previous_profile_path = self.games.get_profile().map(|profile| profile.path.clone());
 
-        if let Ok(selected_new_profile) = self.profiles.select_profile() {
-            if selected_new_profile {
-                self.setup_state();
-                self.auto_mark_save_file();
+        if let Ok(selected_new_game) = self.games.select_game() {
+            let profile_selected = self.games.get_profile().is_some();
+
+            if selected_new_game {
                 self.watcher
-                    .watch_profile_entries(&self.profiles.get_profile().unwrap().path);
+                    .watch_non_recursive(&self.games.get_game().unwrap().path);
 
-                if let Some(path) = old_path {
-                    self.watcher.unwatch(&path).unwrap();
+                if let Some(path) = previous_game_path {
+                    self.watcher
+                        .unwatch(&path)
+                        .expect("This path should've been watched.");
+                }
+
+                if profile_selected {
+                    self.on_profile_change(previous_profile_path);
                 }
             }
+
+            if !profile_selected {
+                return self.open_profile_window();
+            }
+
             self.mode = Mode::Normal;
+        }
+    }
+
+    pub fn handle_game_creation(&mut self) -> Result<()> {
+        let state = &mut self.game_creation;
+
+        let input = self.footer_input.take().map(|input| input.text);
+
+        match &state.step {
+            Step::EnterName => {
+                state.name = input;
+                state.step = Step::PresetOrManual(false);
+            }
+            Step::EnterPath => {
+                let path = PathBuf::from(input.unwrap());
+                Games::create_game(state.name.as_ref().unwrap(), &path)?;
+                self.mode.select_previous();
+            }
+            _ => unreachable!(),
+        }
+
+        Ok(())
+    }
+
+    pub fn confirm_profile_selection(&mut self) {
+        let old_path = self.games.get_profile().map(|profile| profile.path.clone());
+
+        let Some(game) = self.games.get_game_mut() else {
+            return;
+        };
+
+        if let Ok(selected_new_profile) = game.select_profile() {
+            if selected_new_profile {
+                self.on_profile_change(old_path);
+            }
+            self.mode = Mode::Normal;
+        }
+    }
+
+    pub fn on_profile_change(&mut self, previous_profile_path: Option<PathBuf>) {
+        self.setup_state();
+        self.auto_mark_save_file();
+        self.watcher
+            .watch_recursive(&self.games.get_profile().unwrap().path);
+
+        if let Some(path) = previous_profile_path {
+            self.watcher
+                .unwatch(&path)
+                .expect("This path should've been watched.");
         }
     }
 
@@ -180,7 +274,11 @@ impl App {
         let res = match self.mode.confirmation_context() {
             ConfirmationContext::Deletion => self.delete_selected_entry(),
             ConfirmationContext::Replacing => self.replace_save_file(),
-            ConfirmationContext::ProfileDeletion => self.profiles.delete_selected_profile(),
+            ConfirmationContext::GameDeletion => self.games.delete_selected_game(),
+            ConfirmationContext::ProfileDeletion => self
+                .games
+                .get_game_unchecked_mut()
+                .delete_selected_profile(),
         };
 
         self.mode.select_previous();
@@ -194,22 +292,20 @@ impl App {
             ConfirmationContext::Replacing if matches!(self.selected_entry(), Some(entry) if entry.is_folder()) =>
                 {}
             ConfirmationContext::ProfileDeletion
-                if self.profiles.inner.state.selected().is_none() => {}
+                if self.games.get_profiles().state.selected().is_none() => {}
             _ => self.mode = Mode::Confirmation(Prompt::new(self, context)),
         }
     }
 
     pub fn selected_entry(&self) -> Option<&Node<Entry>> {
-        self.tree_state.selected.and_then(|id| {
-            self.profiles
-                .get_entries()
-                .and_then(|entries| entries.get(id))
-        })
+        self.tree_state
+            .selected
+            .and_then(|id| self.games.get_entries().and_then(|entries| entries.get(id)))
     }
 
     pub fn selected_entry_mut(&mut self) -> Option<&mut Node<Entry>> {
         self.tree_state.selected.and_then(|id| {
-            self.profiles
+            self.games
                 .get_entries_mut()
                 .and_then(|entries| entries.get_mut(id))
         })
@@ -217,7 +313,7 @@ impl App {
 
     pub fn delete_selected_entry(&mut self) -> Result<()> {
         if !self.tree_state.marked.is_empty() {
-            let entries = self.profiles.get_entries().unwrap();
+            let entries = self.games.get_entries().unwrap();
             for id in self.tree_state.marked.drain() {
                 entries[id].delete()?;
             }
@@ -245,7 +341,7 @@ impl App {
     }
 
     pub fn context_path(&mut self, top_level: bool) -> PathBuf {
-        let entries = self.profiles.get_entries_mut().unwrap();
+        let entries = self.games.get_entries_mut().unwrap();
 
         let id = (!top_level)
             .then_some(self.tree_state.selected.and_then(|id| entries.context(id)))
@@ -319,7 +415,7 @@ impl App {
         let base_path = self.context_path(top_level);
         let mut fail = false;
 
-        let entries = self.profiles.get_entries().unwrap();
+        let entries = self.games.get_entries().unwrap();
 
         for entry in self.tree_state.marked.drain().map(|id| &entries[id]) {
             let new_path = base_path.join(entry.name());
@@ -337,7 +433,7 @@ impl App {
     }
 
     pub fn move_up(&mut self) {
-        let Some((id, profile)) = (self.tree_state.selected).zip(self.profiles.get_profile_mut())
+        let Some((id, profile)) = (self.tree_state.selected).zip(self.games.get_profile_mut())
         else {
             return;
         };
@@ -356,7 +452,7 @@ impl App {
     }
 
     pub fn move_down(&mut self) {
-        let Some((id, profile)) = (self.tree_state.selected).zip(self.profiles.get_profile_mut())
+        let Some((id, profile)) = (self.tree_state.selected).zip(self.games.get_profile_mut())
         else {
             return;
         };
@@ -377,7 +473,7 @@ impl App {
     }
 
     pub fn open_all_folds(&mut self) {
-        if let Some(entries) = self.profiles.get_entries_mut() {
+        if let Some(entries) = self.games.get_entries_mut() {
             entries.apply_to_nodes(|node| {
                 if let Some(expanded) = node.expanded.as_mut() {
                     *expanded = true;
@@ -387,7 +483,7 @@ impl App {
     }
 
     pub fn close_all_folds(&mut self) {
-        if let Some(entries) = self.profiles.get_entries_mut() {
+        if let Some(entries) = self.games.get_entries_mut() {
             entries.apply_to_nodes(|node| {
                 if let Some(expanded) = node.expanded.as_mut() {
                     *expanded = false;
@@ -411,7 +507,7 @@ impl App {
     }
 
     pub fn on_left(&mut self) {
-        let Some(entries) = self.profiles.get_entries_mut() else {
+        let Some(entries) = self.games.get_entries_mut() else {
             return;
         };
 
@@ -425,7 +521,7 @@ impl App {
     }
 
     pub fn on_up(&mut self) {
-        if let Some(entries) = self.profiles.get_entries() {
+        if let Some(entries) = self.games.get_entries() {
             self.tree_state.select_prev(entries);
             self.auto_mark_save_file();
         }
@@ -439,21 +535,21 @@ impl App {
     }
 
     pub fn on_down(&mut self) {
-        if let Some(entries) = self.profiles.get_entries() {
+        if let Some(entries) = self.games.get_entries() {
             self.tree_state.select_next(entries);
             self.auto_mark_save_file();
         }
     }
 
     pub fn select_first(&mut self) {
-        if let Some(entries) = self.profiles.get_entries() {
+        if let Some(entries) = self.games.get_entries() {
             self.tree_state.select_first(entries);
             self.auto_mark_save_file();
         }
     }
 
     pub fn select_last(&mut self) {
-        if let Some(entries) = self.profiles.get_entries() {
+        if let Some(entries) = self.games.get_entries() {
             self.tree_state.select_last(entries);
             self.auto_mark_save_file();
         }
@@ -461,7 +557,7 @@ impl App {
 
     pub fn up_directory(&mut self) {
         if let Some(id) = self.tree_state.selected {
-            if let Some(entries) = self.profiles.get_entries() {
+            if let Some(entries) = self.games.get_entries() {
                 self.tree_state.select_unchecked(
                     entries
                         .predecessors(id)
@@ -476,7 +572,7 @@ impl App {
 
     pub fn down_directory(&mut self) {
         if let Some(id) = self.tree_state.selected {
-            if let Some(entries) = self.profiles.get_entries() {
+            if let Some(entries) = self.games.get_entries() {
                 self.tree_state.select_unchecked(
                     entries
                         .following_siblings(id)
@@ -495,9 +591,10 @@ impl App {
     }
 
     pub fn load_save_file(&mut self, path: &Path, mark_as_active: bool) -> Result<()> {
-        std::fs::copy(path, &OPTIONS.save_file_path).context("couldn't load save file")?;
+        let game = self.games.get_game_unchecked_mut();
+        std::fs::copy(path, &game.savefile_path).context("couldn't load save file")?;
 
-        let profile = self.profiles.get_profile_mut().unwrap();
+        let profile = game.get_profile_mut().unwrap();
 
         self.message
             .set_message_with_timeout(&format!("Loaded {}", profile.rel_path_to(path)), 5);
@@ -520,7 +617,7 @@ impl App {
     }
 
     pub fn load_active_save_file(&mut self) {
-        if let Some(path) = self.profiles.get_profile().unwrap().get_active_save_file() {
+        if let Some(path) = self.games.get_profile().unwrap().get_active_save_file() {
             set_msg_if_error!(self.message, self.load_save_file(&path, false));
         } else {
             self.message
@@ -534,7 +631,7 @@ impl App {
             .filter(|entry| entry.is_file())
             .map(|entry| entry.path.clone())
         {
-            let profile = self.profiles.get_profile_mut().unwrap();
+            let profile = self.games.get_profile_mut().unwrap();
             set_msg_if_error!(self.message, profile.update_active_save_file(&path));
             self.tree_state.active = self.tree_state.selected;
         }
@@ -547,7 +644,7 @@ impl App {
     }
 
     pub fn import_save_file(&mut self, top_level: bool) {
-        let save_file_path = OPTIONS.save_file_path.clone();
+        let save_file_path = self.games.get_game_unchecked().savefile_path.clone();
         let mut path = self
             .context_path(top_level)
             .join(save_file_path.file_name().unwrap());
@@ -562,7 +659,8 @@ impl App {
     pub fn replace_save_file(&mut self) -> Result<()> {
         if let Some(entry) = self.selected_entry() {
             if entry.is_file() {
-                std::fs::copy(&OPTIONS.save_file_path, &entry.path)?;
+                let savefile_path = &self.games.get_game_unchecked().savefile_path;
+                std::fs::copy(savefile_path, &entry.path)?;
             }
         }
 
@@ -603,7 +701,7 @@ impl App {
 
 impl HandleFileSystemEvent for App {
     fn on_create(&mut self, path: &Path) -> Result<()> {
-        let Some(entries) = self.profiles.get_entries_mut() else {
+        let Some(entries) = self.games.get_entries_mut() else {
             return Ok(());
         };
 
@@ -621,7 +719,7 @@ impl HandleFileSystemEvent for App {
     }
 
     fn on_rename(&mut self, path: &Path, new_path: &Path) -> Result<()> {
-        let Some(profile) = self.profiles.get_profile_mut() else {
+        let Some(profile) = self.games.get_profile_mut() else {
             return Ok(());
         };
 
@@ -651,7 +749,7 @@ impl HandleFileSystemEvent for App {
     }
 
     fn on_delete(&mut self, path: &Path) -> Result<()> {
-        let Some(profile) = self.profiles.get_profile_mut() else {
+        let Some(profile) = self.games.get_profile_mut() else {
             return Ok(());
         };
 

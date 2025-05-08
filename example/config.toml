@@ -1,4 +1,3 @@
-save_file_path = ""
 auto_mark_save_file = false
 hide_extensions = false
 incremental_search = true
@@ -49,7 +48,8 @@ help = { fg = "Green" }
 "m" = "move_down"
 "a" = "open_all_folds"
 "z" = "close_all_folds"
-"w" = "select_profile"
+"W" = "open_game_window"
+"w" = "open_profile_window"
 "ctrl-h" = "toggle_help"
 "f1" = "toggle_help"
 "/" = "enter_search"
@@ -61,6 +61,14 @@ help = { fg = "Green" }
 "esc" = "reset"
 "q" = "quit"
 "ctrl-c" = "quit"
+
+[key_bindings.game_selection]
+"c" = "create"
+"r" = "rename"
+"d" = "delete"
+"enter" = "select"
+"s" = "set_save_file"
+"esc" = "abort"
 
 [key_bindings.profile_selection]
 "c" = "create"

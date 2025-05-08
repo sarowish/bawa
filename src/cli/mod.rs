@@ -36,6 +36,7 @@ pub fn build_command() -> Command {
                 .value_name("FILE"),
         )
         .subcommands(commands::create_entry_subcommands())
+        .subcommand(commands::create_game_subcommand())
         .subcommand(commands::create_profile_subcommand())
 }
 

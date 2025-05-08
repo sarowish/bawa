@@ -1,9 +1,28 @@
-use super::Profile;
+use super::{profile::Profile, Game};
 use crate::tree::{NodeId, Tree};
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
 #[derive(Deserialize)]
-pub struct State {
+pub struct GameState {
+    pub active_profile: Option<String>,
+    pub save_file_path: String,
+}
+
+impl Serialize for Game {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Game", 2)?;
+        let profile_name = self.get_profile().map(Profile::name);
+        state.serialize_field("active_profile", &profile_name)?;
+        state.serialize_field("save_file_path", &self.savefile_path)?;
+        state.end()
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ProfileState {
     pub active_save_file: Option<String>,
     pub entries: Vec<Entry>,
 }

@@ -21,6 +21,7 @@ pub fn draw_confirmation_window(f: &mut Frame, prompt: &mut Prompt) {
 pub enum Context {
     Deletion,
     Replacing,
+    GameDeletion,
     ProfileDeletion,
 }
 
@@ -43,23 +44,27 @@ impl Prompt {
                 format!("Permanently delete {count} selected file{postfix}")
             }
             Context::Replacing => "Overwrite the selected file".to_owned(),
+            Context::GameDeletion => "Permanently delete the selected game".to_owned(),
             Context::ProfileDeletion => "Permanently delete the selected profile".to_owned(),
         };
 
-        let profile = app.profiles.get_profile().unwrap();
-
         let body = match context {
-            Context::Deletion if !app.tree_state.marked.is_empty() => app
-                .tree_state
-                .marked
-                .iter()
-                .map(|id| profile.rel_path_to(&profile.entries[*id].path))
-                .collect(),
+            Context::Deletion if !app.tree_state.marked.is_empty() => {
+                let profile = app.games.get_profile().unwrap();
+                let marked_entries = app.tree_state.marked.iter();
+                marked_entries
+                    .map(|id| profile.rel_path_to(&profile.entries[*id].path))
+                    .collect()
+            }
             Context::Deletion | Context::Replacing => {
+                let profile = app.games.get_profile().unwrap();
                 vec![profile.rel_path_to(&app.selected_entry().unwrap().path)]
             }
+            Context::GameDeletion => {
+                vec![app.games.inner.get_selected().unwrap().name().into_owned()]
+            }
             Context::ProfileDeletion => {
-                vec![(app.profiles.inner)
+                vec![(app.games.get_profiles())
                     .get_selected()
                     .unwrap()
                     .name()

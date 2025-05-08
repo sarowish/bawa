@@ -63,51 +63,8 @@ pub fn rename(from: &Path, to: &Path) -> Result<()> {
     Ok(fs::rename(from, to)?)
 }
 
-pub fn is_steam_id(dir_name: &str) -> bool {
-    dir_name.starts_with("76561")
-        && dir_name.len() == 17
-        && dir_name.chars().all(|c| c.is_ascii_digit())
-}
-
-pub fn get_save_file_paths() -> Result<Vec<PathBuf>> {
-    let data_dir = match dirs::data_dir() {
-        Some(mut path) => {
-            #[cfg(unix)]
-            {
-                let components = [
-                    "Steam",
-                    "steamapps",
-                    "compatdata",
-                    "1245620",
-                    "pfx",
-                    "drive_c",
-                    "users",
-                    "steamuser",
-                    "AppData",
-                    "Roaming",
-                ];
-                path.extend(components);
-            }
-            path.join("EldenRing")
-        }
-        None => bail!("Couldn't find data directory"),
-    };
-
-    let mut paths = Vec::new();
-
-    for entry in data_dir.read_dir()? {
-        let mut path = entry?.path();
-        if path.is_dir() && is_steam_id(&path.file_name().unwrap_or_default().to_string_lossy()) {
-            path.push("ER0000.sl2");
-            paths.push(path);
-        }
-    }
-
-    Ok(paths)
-}
-
-pub fn get_relative_path(base: &Path, path: &Path) -> Result<String> {
-    Ok(path.strip_prefix(base)?.to_string_lossy().into_owned())
+pub fn get_relative_path(base: &Path, path: &Path) -> Result<PathBuf> {
+    Ok(path.strip_prefix(base)?.to_owned())
 }
 
 pub fn write_atomic(path: &Path, content: &[u8]) -> Result<()> {

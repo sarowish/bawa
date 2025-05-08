@@ -1,12 +1,19 @@
-use super::Mode;
+use std::path::PathBuf;
+
+use super::{Input, Mode};
 use crate::{
-    app::App,
-    commands::{Command, ConfirmationCommand, HelpCommand, ProfileSelectionCommand},
+    app::{App, StatefulList},
+    commands::{
+        Command, ConfirmationCommand, GameSelectionCommand, HelpCommand, ProfileSelectionCommand,
+    },
     config::{KEY_BINDINGS, OPTIONS},
     fuzzy_finder::FuzzyFinder,
+    game::{
+        creation::{CreatingGame, Step},
+        Games,
+    },
     help::Help,
     message::set_msg_if_error,
-    profile::Profiles,
     search::Direction,
     ui::confirmation::Context as ConfirmationContext,
 };
@@ -24,6 +31,8 @@ pub fn handle_event(key: KeyEvent, app: &mut App) -> bool {
     match &app.mode {
         Mode::Normal if !app.fuzzy_finder.is_active() => return handle_key_normal_mode(key, app),
         Mode::ProfileSelection => return handle_key_profile_selection_mode(key, app),
+        Mode::GameSelection => return handle_key_game_selection_mode(key, app),
+        Mode::GameCreation => return handle_key_game_creation_mode(key, app),
         Mode::Confirmation(_) => return handle_key_confirmation_mode(key, app),
         _ => handle_key_editing_mode(key, app),
     }
@@ -59,7 +68,8 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::MoveDown => app.move_down(),
             Command::OpenAllFolds => app.open_all_folds(),
             Command::CloseAllFolds => app.close_all_folds(),
-            Command::SelectProfile => app.select_profile(),
+            Command::OpenGameWindow => app.open_game_window(),
+            Command::OpenProfileWindow => app.open_profile_window(),
             Command::ToggleHelp => app.help.toggle(),
             Command::EnterSearch => app.search_new_pattern(),
             Command::RepeatLastSearch => app.repeat_search(),
@@ -75,8 +85,183 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
     false
 }
 
+fn handle_key_game_selection_mode(key: KeyEvent, app: &mut App) -> bool {
+    let games = &mut app.games.inner;
+
+    if let Some(command) = KEY_BINDINGS.game_selection.get(&key) {
+        match command {
+            GameSelectionCommand::Create => {
+                app.game_creation = CreatingGame::default();
+                app.take_input(Mode::GameCreation);
+            }
+            GameSelectionCommand::Rename => {
+                let text = games.get_selected().unwrap().name().into_owned();
+                app.take_input(Mode::GameRenaming);
+                app.footer_input.as_mut().unwrap().set_text(&text);
+            }
+            GameSelectionCommand::Delete => {
+                app.prompt_for_confirmation(ConfirmationContext::GameDeletion);
+            }
+            GameSelectionCommand::Select => app.confirm_game_selection(),
+            GameSelectionCommand::SetSavefile => {
+                app.mode = Mode::GameCreation;
+                app.game_creation = CreatingGame::edit_path();
+            }
+            GameSelectionCommand::Abort => abort(app),
+        }
+    } else if let Some(command) = KEY_BINDINGS.get(&key) {
+        match command {
+            Command::OnDown => games.next(),
+            Command::OnUp => games.previous(),
+            Command::SelectFirst => games.select_first(),
+            Command::SelectLast => games.select_last(),
+            Command::EnterSearch => app.search_new_pattern(),
+            Command::RepeatLastSearch => app.repeat_search(),
+            Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
+            Command::OpenProfileWindow => app.open_profile_window(),
+            Command::Quit => return true,
+            _ => (),
+        }
+    }
+
+    false
+}
+
+fn handle_key_game_creation_mode(key: KeyEvent, app: &mut App) -> bool {
+    let state = &mut app.game_creation;
+
+    match &mut state.step {
+        Step::EnterName | Step::EnterPath => handle_key_editing_mode(key, app),
+        Step::PresetOrManual(use_preset) => {
+            if let Some(command) = KEY_BINDINGS.game_selection.get(&key) {
+                match command {
+                    GameSelectionCommand::Select => {
+                        if *use_preset {
+                            state.load_presets();
+                        } else {
+                            let mut input = Input::new("Path: ");
+
+                            if state.edit {
+                                input.set_text(
+                                    &app.games
+                                        .inner
+                                        .get_selected()
+                                        .unwrap()
+                                        .savefile_path
+                                        .to_string_lossy(),
+                                );
+                            }
+
+                            app.footer_input = Some(input);
+                            app.message.clear();
+                            state.step = Step::EnterPath;
+                        }
+                    }
+                    GameSelectionCommand::Abort => {
+                        if state.edit {
+                            app.mode.select_previous();
+                        } else {
+                            state.step = Step::EnterName;
+                            let mut input = Input::new("Game Name: ");
+                            input.set_text(state.name.as_ref().unwrap());
+                            app.footer_input = Some(input);
+                            app.message.clear();
+                        }
+                    }
+                    _ => (),
+                }
+            } else if let Some(command) = KEY_BINDINGS.get(&key) {
+                match command {
+                    Command::OnLeft | Command::OnRight => *use_preset = !*use_preset,
+                    Command::Quit => return true,
+                    _ => (),
+                }
+            }
+        }
+        Step::Presets(presets) => {
+            if let Some(command) = KEY_BINDINGS.game_selection.get(&key) {
+                match command {
+                    GameSelectionCommand::Select => {
+                        let selected_preset = presets.get_selected().unwrap();
+                        let paths = if matches!(presets.state.selected(), Some(0)) {
+                            selected_preset.get_from_documents_dir()
+                        } else {
+                            selected_preset.get_from_data_dir()
+                        };
+
+                        match paths {
+                            Ok(paths) => {
+                                state.step =
+                                    Step::SaveFileLocations(StatefulList::with_items(paths));
+                            }
+                            Err(_) => app.message.set_error_from_str(
+                                "Couldn't find a savefile location for the game.",
+                            ),
+                        }
+                    }
+                    GameSelectionCommand::Abort => state.step = Step::PresetOrManual(true),
+                    _ => (),
+                }
+            } else if let Some(command) = KEY_BINDINGS.get(&key) {
+                match command {
+                    Command::OnDown => presets.next(),
+                    Command::OnUp => presets.previous(),
+                    Command::SelectFirst => presets.select_first(),
+                    Command::SelectLast => presets.select_last(),
+                    Command::EnterSearch => app.search_new_pattern(),
+                    Command::RepeatLastSearch => app.repeat_search(),
+                    Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
+                    Command::Quit => return true,
+                    _ => (),
+                }
+            }
+        }
+        Step::SaveFileLocations(paths) => {
+            if let Some(command) = KEY_BINDINGS.game_selection.get(&key) {
+                match command {
+                    GameSelectionCommand::Select => {
+                        if let Some(path) = paths.get_selected() {
+                            set_msg_if_error!(
+                                app.message,
+                                if state.edit {
+                                    app.games.get_game_unchecked_mut().set_savefile_path(path)
+                                } else {
+                                    Games::create_game(
+                                        state.name.as_ref().unwrap(),
+                                        &PathBuf::from(path),
+                                    )
+                                }
+                            );
+
+                            app.mode.select_previous();
+                        }
+                    }
+                    GameSelectionCommand::Abort => state.load_presets(),
+                    _ => (),
+                }
+            } else if let Some(command) = KEY_BINDINGS.get(&key) {
+                match command {
+                    Command::OnDown => paths.next(),
+                    Command::OnUp => paths.previous(),
+                    Command::SelectFirst => paths.select_first(),
+                    Command::SelectLast => paths.select_last(),
+                    Command::EnterSearch => app.search_new_pattern(),
+                    Command::RepeatLastSearch => app.repeat_search(),
+                    Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
+                    Command::Quit => return true,
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    false
+}
+
 fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
-    let profiles = &mut app.profiles.inner;
+    let Some(profiles) = app.games.get_game_mut().map(|game| &mut game.profiles) else {
+        return false;
+    };
 
     if let Some(command) = KEY_BINDINGS.profile_selection.get(&key) {
         match command {
@@ -101,6 +286,7 @@ fn handle_key_profile_selection_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::EnterSearch => app.search_new_pattern(),
             Command::RepeatLastSearch => app.repeat_search(),
             Command::RepeatLastSearchBackward => app.repeat_search_reverse(),
+            Command::OpenGameWindow => app.open_game_window(),
             Command::Quit => return true,
             _ => (),
         }
@@ -199,10 +385,29 @@ fn complete(app: &mut App) {
     let res = match &app.mode {
         Mode::EntryRenaming => app.rename_selected_entry(),
         Mode::FolderCreation(top_level) => app.create_folder(*top_level),
-        Mode::ProfileCreation => Profiles::create_profile(&app.extract_input()),
+        Mode::GameCreation => {
+            if app.game_creation.edit {
+                let savefile_path = &app.extract_input();
+                app.games
+                    .get_game_unchecked_mut()
+                    .set_savefile_path(savefile_path)
+            } else {
+                app.handle_game_creation()
+            }
+        }
+        Mode::GameRenaming => {
+            let new_name = app.extract_input();
+            app.games.rename_selected_game(&new_name)
+        }
+        Mode::ProfileCreation => {
+            let name = &app.extract_input();
+            app.games.get_game_unchecked().create_profile(name)
+        }
         Mode::ProfileRenaming => {
             let new_name = app.extract_input();
-            app.profiles.rename_selected_profile(&new_name)
+            app.games
+                .get_game_unchecked_mut()
+                .rename_selected_profile(&new_name)
         }
         Mode::Search(..) => app.complete_search(),
         Mode::Normal
@@ -219,19 +424,38 @@ fn complete(app: &mut App) {
 }
 
 fn abort(app: &mut App) {
-    match &app.mode {
+    match &mut app.mode {
+        Mode::GameSelection => {
+            if app.games.get_game().is_none() {
+                app.message
+                    .set_warning("Can't abort while no game is selected");
+            } else if app.games.get_profile().is_none() {
+                app.open_profile_window();
+            } else {
+                app.mode.select_previous();
+            }
+        }
         Mode::ProfileSelection => {
-            if app.profiles.get_profile().is_some() {
+            if app.games.get_profile().is_some() {
                 app.mode.select_previous();
             } else {
                 app.message
                     .set_warning("Can't abort while no profile is selected");
             }
         }
+        Mode::GameCreation => match app.game_creation.step {
+            Step::EnterName => app.abort_input(),
+            Step::EnterPath => {
+                app.footer_input = None;
+                app.game_creation.step = Step::PresetOrManual(false);
+            }
+            _ => unreachable!(),
+        },
         Mode::EntryRenaming
         | Mode::FolderCreation(..)
         | Mode::ProfileCreation
-        | Mode::ProfileRenaming => app.abort_input(),
+        | Mode::ProfileRenaming
+        | Mode::GameRenaming => app.abort_input(),
         Mode::Search(_) => app.abort_search(),
         Mode::Normal => app.fuzzy_finder.reset(),
         Mode::Confirmation(_) => (),

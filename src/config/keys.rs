@@ -1,5 +1,7 @@
 use super::MergeConfig;
-use crate::commands::{Command, ConfirmationCommand, HelpCommand, ProfileSelectionCommand};
+use crate::commands::{
+    Command, ConfirmationCommand, GameSelectionCommand, HelpCommand, ProfileSelectionCommand,
+};
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use indexmap::IndexMap;
@@ -13,6 +15,7 @@ use std::{
 pub struct UserKeyBindings {
     #[serde(flatten)]
     general: Option<HashMap<String, String>>,
+    game_selection: Option<HashMap<String, String>>,
     profile_selection: Option<HashMap<String, String>>,
     help: Option<HashMap<String, String>>,
     confirmation: Option<HashMap<String, String>>,
@@ -73,6 +76,7 @@ fn parse_binding(binding: &str) -> Result<KeyEvent> {
 #[derive(PartialEq, Eq, Debug)]
 pub struct KeyBindings {
     pub general: IndexMap<KeyEvent, Command>,
+    pub game_selection: IndexMap<KeyEvent, GameSelectionCommand>,
     pub profile_selection: IndexMap<KeyEvent, ProfileSelectionCommand>,
     pub help: IndexMap<KeyEvent, HelpCommand>,
     pub confirmation: IndexMap<KeyEvent, ConfirmationCommand>,
@@ -82,6 +86,7 @@ impl Default for KeyBindings {
     #[rustfmt::skip]
     fn default() -> Self {
         let mut general = IndexMap::new();
+        let mut game_selection = IndexMap::new();
         let mut profile_selection = IndexMap::new();
         let mut help = IndexMap::new();
         let mut confirmation = IndexMap::new();
@@ -122,7 +127,8 @@ impl Default for KeyBindings {
         insert_binding!(general, "m", Command::MoveDown);
         insert_binding!(general, "a", Command::OpenAllFolds);
         insert_binding!(general, "z", Command::CloseAllFolds);
-        insert_binding!(general, "w", Command::SelectProfile);
+        insert_binding!(general, "W", Command::OpenGameWindow);
+        insert_binding!(general, "w", Command::OpenProfileWindow);
         insert_binding!(general, "ctrl-h", Command::ToggleHelp);
         insert_binding!(general, "f1", Command::ToggleHelp);
         insert_binding!(general, "/", Command::EnterSearch);
@@ -134,6 +140,13 @@ impl Default for KeyBindings {
         insert_binding!(general, "esc", Command::Reset);
         insert_binding!(general, "q", Command::Quit);
         insert_binding!(general, "ctrl-c", Command::Quit);
+
+        insert_binding!(game_selection, "c", GameSelectionCommand::Create);
+        insert_binding!(game_selection, "r", GameSelectionCommand::Rename);
+        insert_binding!(game_selection, "d", GameSelectionCommand::Delete);
+        insert_binding!(game_selection, "enter", GameSelectionCommand::Select);
+        insert_binding!(game_selection, "s", GameSelectionCommand::SetSavefile);
+        insert_binding!(game_selection, "escape", GameSelectionCommand::Abort);
 
         insert_binding!(profile_selection, "c", ProfileSelectionCommand::Create);
         insert_binding!(profile_selection, "r", ProfileSelectionCommand::Rename);
@@ -158,6 +171,7 @@ impl Default for KeyBindings {
 
         Self {
             general,
+            game_selection,
             profile_selection,
             help,
             confirmation,
@@ -201,6 +215,10 @@ impl MergeConfig for KeyBindings {
             set_bindings(&mut self.general, &bindings)?;
         }
 
+        if let Some(bindings) = user_key_bindings.game_selection {
+            set_bindings(&mut self.game_selection, &bindings)?;
+        }
+
         if let Some(bindings) = user_key_bindings.profile_selection {
             set_bindings(&mut self.profile_selection, &bindings)?;
         }
@@ -242,12 +260,14 @@ mod tests {
 
         let UserKeyBindings {
             general,
+            game_selection,
             profile_selection,
             help,
             confirmation,
         } = user_config.key_bindings.unwrap();
 
         assert!(general.is_some_and(|keys| keys.len() == default.general.len()));
+        assert!(game_selection.is_some_and(|keys| keys.len() == default.game_selection.len()));
         assert!(profile_selection.is_some_and(|keys| keys.len() == default.profile_selection.len()));
         assert!(help.is_some_and(|keys| keys.len() == default.help.len()));
         assert!(confirmation.is_some_and(|keys| keys.len() == default.confirmation.len()));

@@ -1,4 +1,4 @@
-use crate::{app::App, config::OPTIONS, input::Mode, tree::NodeId};
+use crate::{app::App, config::OPTIONS, game::creation::Step, input::Mode, tree::NodeId};
 use anyhow::Result;
 use nucleo_matcher::{
     pattern::{AtomKind, CaseMatching, Normalization, Pattern},
@@ -9,6 +9,8 @@ use nucleo_matcher::{
 pub enum Context {
     #[default]
     Normal,
+    GameSelection,
+    GameCreation,
     ProfileSelection,
 }
 
@@ -109,19 +111,39 @@ impl App {
 
         let items: Vec<_> = match self.mode.search_context() {
             Context::Normal => {
-                let entries = self.profiles.get_entries().unwrap();
+                let entries = self.games.get_entries().unwrap();
                 entries
                     .visible(NodeId::root())
                     .map(|id| Utf32String::from(entries[id].to_string()))
                     .collect()
             }
             Context::ProfileSelection => self
-                .profiles
-                .inner
+                .games
+                .get_profiles()
                 .items
                 .iter()
                 .map(|p| Utf32String::from(p.name()))
                 .collect(),
+            Context::GameSelection => self
+                .games
+                .inner
+                .items
+                .iter()
+                .map(|g| Utf32String::from(g.name()))
+                .collect(),
+            Context::GameCreation => match &self.game_creation.step {
+                Step::Presets(presets) => presets
+                    .items
+                    .iter()
+                    .map(|p| Utf32String::from(p.to_string()))
+                    .collect(),
+                Step::SaveFileLocations(paths) => paths
+                    .items
+                    .iter()
+                    .map(|p| Utf32String::from(p.to_owned()))
+                    .collect(),
+                _ => unreachable!(),
+            },
         };
 
         if let Some(idx) = self.search.search(&items, direction) {
@@ -172,13 +194,20 @@ impl App {
     fn get_search_start_position(&mut self) -> Option<usize> {
         match self.mode.search_context() {
             Context::Normal => self.tree_state.selected.and_then(|selected| {
-                self.profiles
+                self.games
                     .get_entries()
                     .unwrap()
                     .visible(NodeId::root())
                     .position(|id| id == selected)
             }),
-            Context::ProfileSelection => self.profiles.inner.state.selected(),
+            Context::ProfileSelection => self.games.get_profiles().state.selected(),
+            Context::GameSelection => self.games.inner.state.selected(),
+            Context::GameCreation => match &self.game_creation.step {
+                Step::Presets(presets) => &presets.state,
+                Step::SaveFileLocations(paths) => &paths.state,
+                _ => unreachable!(),
+            }
+            .selected(),
         }
     }
 
@@ -186,11 +215,20 @@ impl App {
         if let Some(idx) = idx {
             match self.mode.search_context() {
                 Context::Normal => {
-                    let mut visible = self.profiles.get_entries().unwrap().visible(NodeId::root());
+                    let mut visible = self.games.get_entries().unwrap().visible(NodeId::root());
                     self.tree_state.select_unchecked(visible.nth(idx));
                     self.auto_mark_save_file();
                 }
-                Context::ProfileSelection => self.profiles.inner.state.select(Some(idx)),
+                Context::ProfileSelection => self.games.get_profiles_mut().state.select(Some(idx)),
+                Context::GameSelection => {
+                    self.games.inner.state.select(Some(idx));
+                }
+                Context::GameCreation => match &mut self.game_creation.step {
+                    Step::Presets(presets) => &mut presets.state,
+                    Step::SaveFileLocations(paths) => &mut paths.state,
+                    _ => unreachable!(),
+                }
+                .select(Some(idx)),
             };
         }
     }

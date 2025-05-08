@@ -8,7 +8,7 @@ pub struct Local {
 
 impl Local {
     pub fn new(app: &App) -> Self {
-        let profile = app.profiles.get_profile().unwrap();
+        let profile = app.games.get_profile().unwrap();
         let tree = &profile.entries;
 
         let entries = tree
@@ -29,7 +29,7 @@ impl Picker for Local {
     fn jump(&self, idx: usize, app: &mut App) {
         app.tree_state.select(
             Some(self.entries[idx].1),
-            app.profiles.get_entries_mut().unwrap(),
+            app.games.get_entries_mut().unwrap(),
         );
     }
 }
@@ -42,7 +42,7 @@ impl Global {
     pub fn new(app: &mut App) -> Result<Self> {
         let mut entries = Vec::new();
 
-        for (idx, profile) in app.profiles.inner.items.iter_mut().enumerate() {
+        for (idx, profile) in app.games.get_profiles_mut().items.iter_mut().enumerate() {
             profile.load_entries()?;
             let tree = &profile.entries;
 
@@ -75,10 +75,10 @@ impl Picker for Global {
 
     fn jump(&self, idx: usize, app: &mut App) {
         let (profile_idx, node_id) = self.entries[idx].1;
-        app.profiles.inner.state.select(Some(profile_idx));
+        app.games.get_profiles_mut().state.select(Some(profile_idx));
         app.confirm_profile_selection();
         app.tree_state
-            .select(Some(node_id), app.profiles.get_entries_mut().unwrap());
+            .select(Some(node_id), app.games.get_entries_mut().unwrap());
     }
 }
 

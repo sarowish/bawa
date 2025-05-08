@@ -20,7 +20,6 @@ tempfile = "3.15.0"
 tokio = { version = "1.41.1", features = ["full"] }
 tokio-util = "0.7.12"
 toml = "0.8.19"
-toml_edit = "0.22.22"
 unicode-segmentation = "1.12.0"
 unicode-width = "0.2.0"
 

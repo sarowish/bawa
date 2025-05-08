@@ -238,8 +238,9 @@ impl From<&Mode> for Input {
     fn from(value: &Mode) -> Self {
         let prompt = match value {
             Mode::Search(_) => "/",
+            Mode::GameCreation => "Game Name: ",
             Mode::ProfileCreation => "Profile Name: ",
-            Mode::EntryRenaming | Mode::ProfileRenaming => "Rename: ",
+            Mode::EntryRenaming | Mode::ProfileRenaming | Mode::GameRenaming => "Rename: ",
             Mode::FolderCreation(_) => "Folder Name: ",
             Mode::Normal => "",
             _ => panic!(),

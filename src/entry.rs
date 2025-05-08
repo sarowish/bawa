@@ -24,7 +24,7 @@ impl Entry {
 
     pub fn add_to_tree(
         self,
-        entries: &[crate::profile::state::Entry],
+        entries: &[crate::game::state::Entry],
         tree: &mut Tree<Entry>,
     ) -> Result<NodeId> {
         let path = self.path.clone();

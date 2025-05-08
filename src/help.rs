@@ -2,7 +2,7 @@ use crate::{config::KEY_BINDINGS, ui::Scroller};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 
-const DESCRIPTIONS_LEN: usize = 35;
+const DESCRIPTIONS_LEN: usize = 36;
 const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Go one line downward",                                 // On Down
     "Go one line upward",                                   // On Up
@@ -29,7 +29,8 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Swap the selected entry with its below sibling",       // Move Below
     "Open all folds",                                       // Open All Folds
     "Close all folds",                                      // Close All Folds
-    "Open profile selection window",                        // Select Profile
+    "Open game selection window",                           // Open Game Window
+    "Open profile selection window",                        // Open Profile Window
     "Open help window",                                     // Toggle Help
     "Enter search pattern",                                 // Enter Search
     "Repeat the latest search",                             // Repeat Last Search
@@ -39,6 +40,16 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Mark the selected entry",                              // Mark Entry
     "Unmark all marked entries",                            // Reset
     "Quit application",                                     // Quit
+];
+
+const GAME_SELECTION_DESCRIPTIONS_LEN: usize = 6;
+const GAME_SELECTION_DESCRIPTIONS: [&str; GAME_SELECTION_DESCRIPTIONS_LEN] = [
+    " - Create, ",
+    " - Rename, ",
+    " - Delete, ",
+    " - Set savefile path, ",
+    " - Select, ",
+    " - Abort",
 ];
 
 const PROFILE_SELECTION_DESCRIPTIONS_LEN: usize = 5;
@@ -101,6 +112,7 @@ const HELP_ENTRY: (String, &str) = (String::new(), "");
 
 pub struct Bindings {
     pub general: [(String, &'static str); DESCRIPTIONS_LEN],
+    pub game_selection: [(String, &'static str); GAME_SELECTION_DESCRIPTIONS_LEN],
     pub profile_selection: [(String, &'static str); PROFILE_SELECTION_DESCRIPTIONS_LEN],
 }
 
@@ -108,6 +120,7 @@ impl Default for Bindings {
     fn default() -> Self {
         let mut help = Self {
             general: [HELP_ENTRY; DESCRIPTIONS_LEN],
+            game_selection: [HELP_ENTRY; GAME_SELECTION_DESCRIPTIONS_LEN],
             profile_selection: [HELP_ENTRY; PROFILE_SELECTION_DESCRIPTIONS_LEN],
         };
 
@@ -129,6 +142,11 @@ impl Default for Bindings {
         }
 
         generate_entries!(help.general, KEY_BINDINGS.general, DESCRIPTIONS);
+        generate_entries!(
+            help.game_selection,
+            KEY_BINDINGS.game_selection,
+            GAME_SELECTION_DESCRIPTIONS
+        );
         generate_entries!(
             help.profile_selection,
             KEY_BINDINGS.profile_selection,
