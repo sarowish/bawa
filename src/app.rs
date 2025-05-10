@@ -729,8 +729,18 @@ impl HandleFileSystemEvent for App {
             entries.append(parent_id, new);
 
             let node = &mut entries[new];
+
             if node.is_folder() {
                 node.expanded = Some(false);
+            }
+
+            if self
+                .tree_state
+                .selected
+                .filter(|id| !entries.detached_from_root(*id))
+                .is_none()
+            {
+                self.tree_state.select_unchecked(Some(new));
             }
         }
 
@@ -804,6 +814,14 @@ impl<T> StatefulList<T> {
         stateful_list.select_first();
 
         stateful_list
+    }
+
+    pub fn push(&mut self, item: T) {
+        self.items.push(item);
+
+        if self.state.selected().is_none() {
+            self.select_first();
+        }
     }
 
     fn select_with_index(&mut self, index: usize) {

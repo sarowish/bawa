@@ -189,7 +189,7 @@ impl Display for Game {
 
 impl HandleFileSystemEvent for Game {
     fn on_create(&mut self, path: &Path) -> Result<()> {
-        self.profiles.items.push(Profile::new(path.to_owned()));
+        self.profiles.push(Profile::new(path.to_owned()));
 
         Ok(())
     }
@@ -357,7 +357,7 @@ impl Games {
 
 impl HandleFileSystemEvent for Games {
     fn on_create(&mut self, path: &Path) -> Result<()> {
-        self.inner.items.push(Game::new(path.to_owned()));
+        self.inner.push(Game::new(path.to_owned()));
 
         Ok(())
     }
