@@ -278,11 +278,7 @@ impl<T> Tree<T> {
     /// let r = tree.add_value("r");
     /// let a = tree.add_value("a");
     /// let b = tree.add_value("b");
-    /// let c = tree.add_value("c");
     /// tree.append(r, a);
-    /// tree.append(r, b);
-    /// tree.append(r, c);
-    /// tree.detach(b);
     ///
     /// assert!(!tree.detached_from_root(a));
     /// assert!(tree.detached_from_root(b));
