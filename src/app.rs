@@ -140,19 +140,20 @@ impl App {
     }
 
     fn on_profile_event(&mut self, event: &FileSystemEvent) -> Result<()> {
-        self.games
-            .get_game_unchecked_mut()
-            .handle_file_system_event(event)?;
+        if let Some(game) = self.games.get_game_mut() {
+            game.handle_file_system_event(event)?;
 
-        match self.games.get_profile() {
-            Some(profile) => match &event.kind {
-                EventKind::Rename(new_path) if *new_path == profile.path => {
-                    self.watcher.watch_recursive(new_path);
-                }
-                _ => (),
-            },
-            None => self.open_profile_window(),
+            match game.get_profile() {
+                Some(profile) => match &event.kind {
+                    EventKind::Rename(new_path) if *new_path == profile.path => {
+                        self.watcher.watch_recursive(new_path);
+                    }
+                    _ => (),
+                },
+                None => self.open_profile_window(),
+            }
         }
+
         Ok(())
     }
 
@@ -767,7 +768,7 @@ impl HandleFileSystemEvent for App {
     }
 
     fn on_delete(&mut self, path: &Path) -> Result<()> {
-        let Some(profile) = self.games.get_profile_mut() else {
+        let Some(profile) = self.games.get_profile_mut().filter(|p| p.path.exists()) else {
             return Ok(());
         };
 

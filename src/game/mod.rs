@@ -213,6 +213,10 @@ impl HandleFileSystemEvent for Game {
     }
 
     fn on_delete(&mut self, path: &Path) -> Result<()> {
+        if !self.path.exists() {
+            return Ok(());
+        }
+
         let profiles = &self.profiles.items;
 
         if let Some(idx) = profiles.iter().position(|profile| profile.path == path) {
