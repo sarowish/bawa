@@ -5,7 +5,7 @@ use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 #[derive(Deserialize)]
 pub struct GameState {
     pub active_profile: Option<String>,
-    pub save_file_path: String,
+    pub savefile_path: Option<String>,
 }
 
 impl Serialize for Game {
@@ -16,7 +16,7 @@ impl Serialize for Game {
         let mut state = serializer.serialize_struct("Game", 2)?;
         let profile_name = self.get_profile().map(Profile::name);
         state.serialize_field("active_profile", &profile_name)?;
-        state.serialize_field("save_file_path", &self.savefile_path)?;
+        state.serialize_field("savefile_path", &self.savefile_path)?;
         state.end()
     }
 }

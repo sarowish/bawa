@@ -152,8 +152,8 @@ fn handle_key_game_creation_mode(key: KeyEvent, app: &mut App) -> bool {
                                     &app.games
                                         .inner
                                         .get_selected()
-                                        .unwrap()
-                                        .savefile_path
+                                        .and_then(|game| game.savefile_path.clone())
+                                        .unwrap_or_default()
                                         .to_string_lossy(),
                                 );
                             }

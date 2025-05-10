@@ -44,7 +44,7 @@ pub fn get_active_game() -> Result<String> {
 
 pub struct Game {
     pub path: PathBuf,
-    pub savefile_path: PathBuf,
+    pub savefile_path: Option<PathBuf>,
     pub profiles: StatefulList<Profile>,
     pub active_profile: Option<usize>,
 }
@@ -53,7 +53,7 @@ impl Game {
     pub fn new(path: PathBuf) -> Self {
         Self {
             path,
-            savefile_path: PathBuf::default(),
+            savefile_path: None,
             profiles: StatefulList::with_items(Vec::new()),
             active_profile: None,
         }
@@ -81,7 +81,7 @@ impl Game {
             .ok()
             .and_then(|s| bincode::deserialize::<state::GameState>(&s).ok())
         {
-            self.savefile_path = state.save_file_path.into();
+            self.savefile_path = state.savefile_path.map(PathBuf::from);
             if let Some(name) = state.active_profile {
                 self.active_profile = profiles.iter().position(|profile| profile.name() == name);
 
@@ -155,7 +155,7 @@ impl Game {
     }
 
     pub fn set_savefile_path(&mut self, savefile_path: &str) -> Result<()> {
-        self.savefile_path = PathBuf::from(savefile_path);
+        self.savefile_path = Some(PathBuf::from(savefile_path));
         self.write_state()
     }
 
@@ -261,7 +261,7 @@ impl Games {
         std::fs::create_dir(&path)?;
 
         let mut game = Game::new(path);
-        savefile_path.clone_into(&mut game.savefile_path);
+        game.savefile_path = Some(savefile_path.to_owned());
         game.write_state()?;
 
         Ok(())

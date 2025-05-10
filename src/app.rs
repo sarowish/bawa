@@ -595,7 +595,13 @@ impl App {
 
     pub fn load_save_file(&mut self, path: &Path, mark_as_active: bool) -> Result<()> {
         let game = self.games.get_game_unchecked_mut();
-        std::fs::copy(path, &game.savefile_path).context("couldn't load save file")?;
+        let Some(savefile_path) = &game.savefile_path else {
+            self.message
+                .set_warning("No savefile path is set for the game.");
+            return Ok(());
+        };
+
+        std::fs::copy(path, savefile_path).context("couldn't load save file")?;
 
         let profile = game.get_profile_mut().unwrap();
 
@@ -647,23 +653,32 @@ impl App {
     }
 
     pub fn import_save_file(&mut self, top_level: bool) {
-        let save_file_path = self.games.get_game_unchecked().savefile_path.clone();
+        let Some(savefile_path) = self.games.get_game_unchecked().savefile_path.clone() else {
+            self.message
+                .set_warning("No savefile path is set for the game.");
+            return;
+        };
+
         let mut path = self
             .context_path(top_level)
-            .join(save_file_path.file_name().unwrap());
+            .join(savefile_path.file_name().unwrap());
         utils::validate_name(&mut path);
 
         set_msg_if_error!(
             self.message,
-            std::fs::copy(&save_file_path, &path).map_err(Into::into)
+            std::fs::copy(&savefile_path, &path).map_err(Into::into)
         );
     }
 
     pub fn replace_save_file(&mut self) -> Result<()> {
         if let Some(entry) = self.selected_entry() {
             if entry.is_file() {
-                let savefile_path = &self.games.get_game_unchecked().savefile_path;
-                std::fs::copy(savefile_path, &entry.path)?;
+                if let Some(savefile_path) = &self.games.get_game_unchecked().savefile_path {
+                    std::fs::copy(savefile_path, &entry.path)?;
+                } else {
+                    self.message
+                        .set_warning("No savefile path is set for the game.");
+                }
             }
         }
 
