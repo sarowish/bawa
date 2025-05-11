@@ -75,7 +75,7 @@ impl Game {
 
     fn load_profiles(&mut self) -> Result<()> {
         let mut profiles = self.read_profiles()?;
-        let state_file = self.path.join("_state");
+        let state_file = self.path.join(".state");
 
         if let Some(state) = fs::read(state_file)
             .ok()
@@ -97,7 +97,7 @@ impl Game {
     }
 
     pub fn write_state(&self) -> Result<()> {
-        utils::write_atomic(&self.path.join("_state"), &bincode::serialize(self)?)
+        utils::write_atomic(&self.path.join(".state"), &bincode::serialize(self)?)
     }
 
     pub fn create_profile(&self, name: &str) -> Result<()> {

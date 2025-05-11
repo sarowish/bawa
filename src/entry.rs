@@ -38,7 +38,7 @@ impl Entry {
 
             let from_read_dir = path.read_dir()?.flatten().filter_map(|dir_entry| {
                 let name = dir_entry.file_name();
-                (name != "_state" && entries.iter().all(|entry| *entry.name != name))
+                (name != ".state" && entries.iter().all(|entry| *entry.name != name))
                     .then_some((dir_entry.path(), None))
             });
 

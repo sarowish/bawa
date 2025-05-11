@@ -31,7 +31,7 @@ impl Profile {
             return Ok(());
         }
 
-        let state_file = self.abs_path_to("_state");
+        let state_file = self.abs_path_to(".state");
         let root = Entry::new(&self.path);
         if let Some(state) = fs::read(state_file)
             .ok()
@@ -47,7 +47,7 @@ impl Profile {
     }
 
     pub fn write_state(&self) -> Result<()> {
-        utils::write_atomic(&self.abs_path_to("_state"), &bincode::serialize(self)?)
+        utils::write_atomic(&self.abs_path_to(".state"), &bincode::serialize(self)?)
     }
 
     pub fn get_active_save_file(&self) -> Option<PathBuf> {
