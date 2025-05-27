@@ -1,4 +1,7 @@
-use crate::tree::{NodeId, Tree};
+use crate::{
+    config::OPTIONS,
+    tree::{NodeId, Tree},
+};
 use ratatui::{
     style::{Color, Style},
     text::{Line, Span, Text},
@@ -22,9 +25,15 @@ impl TreeItem<'_> {
             "  │ ".repeat(depth)
         };
         let folder = match tree[id].expanded {
-            Some(true) => "  ",
-            Some(false) => "  ",
-            None => " ",
+            Some(true) => format!(
+                "{} {} ",
+                OPTIONS.icons.arrow_open, OPTIONS.icons.folder_open
+            ),
+            Some(false) => format!(
+                "{} {} ",
+                OPTIONS.icons.arrow_closed, OPTIONS.icons.folder_closed
+            ),
+            None => String::from(" "),
         };
 
         let line = Line::from(vec![

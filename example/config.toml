@@ -2,6 +2,7 @@ auto_mark_save_file = false
 hide_extensions = false
 incremental_search = true
 rename = { cursor = "before_ext" }
+icons = { folder_open = "", folder_closed = "", arrow_open = "", arrow_closed = "" }
 
 [theme]
 title = { fg = "Cyan", modifiers = "bold" }
