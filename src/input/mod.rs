@@ -229,6 +229,10 @@ impl Input {
         }
     }
 
+    pub fn visible_width(&self) -> usize {
+        self.text[self.offset..].width()
+    }
+
     pub fn cursor_position(&self) -> u16 {
         self.cursor_position + self.cursor_offset - self.text[..self.offset].width() as u16
     }

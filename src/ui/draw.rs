@@ -17,7 +17,6 @@ use ratatui::{
     Frame,
 };
 use std::fmt::Display;
-use unicode_width::UnicodeWidthStr;
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let main_layout = if app.footer_input.is_some() || !app.message.is_empty() {
@@ -159,7 +158,7 @@ pub fn draw_fuzzy_finder(f: &mut Frame, fuzzy_finder: &mut FuzzyFinder, area: Re
 
     let [prompt_area, input_area, mut counter_area] = Layout::horizontal([
         Constraint::Length(fuzzy_finder.input.cursor_offset),
-        Constraint::Length(fuzzy_finder.input.text.width() as u16),
+        Constraint::Length(fuzzy_finder.input.visible_width() as u16),
         Constraint::Fill(1),
     ])
     .areas(search_bar_area);
