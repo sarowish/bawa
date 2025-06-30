@@ -7,7 +7,7 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Go one line downward",                                 // On Down
     "Go one line upward",                                   // On Up
     "Close fold",                                           // On Left
-    "Open Fold",                                            // On Right
+    "Open fold",                                            // On Right
     "Jump to the first line",                               // Select First
     "Jump to the last line",                                // Select Last
     "Jump to the folder below",                             // Down Directory
@@ -35,8 +35,8 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Enter search pattern",                                 // Enter Search
     "Repeat the latest search",                             // Repeat Last Search
     "Repeat the latest search backward",                    // Repeat Last Search Backward
-    "Open Fuzzy Finder",                                    // Open Fuzzy Finder
-    "Open Global Fuzzy Finder",                             // Open Fuzzy Finder Global
+    "Open fuzzy finder",                                    // Open Fuzzy Finder
+    "Open global fuzzy finder",                             // Open Fuzzy Finder Global
     "Mark the selected entry",                              // Mark Entry
     "Unmark all marked entries",                            // Reset
     "Quit application",                                     // Quit
