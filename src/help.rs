@@ -15,7 +15,7 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Jump to the parent folder",                            // Jump To Parent
     "Load the selected save file",                          // Load Save File
     "Load the active save file",                            // Load Active Save File
-    "Mark the selected save file",                          // Mark Save File
+    "Mark the selected save file as active",                // Mark Save File
     "Import save file into the current folder",             // Import Save File
     "Import save file to the top level",                    // Import Save File Top Level
     "Import new save file and overwrite the selected file", // Replace Save File
@@ -23,8 +23,8 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Create folder",                                        // Create Folder
     "Create folder in the top level",                       // Create Folder Top Level
     "Rename the selected file/folder",                      // Rename
-    "Move the selected entries into the current folder",    // Move Entries
-    "Move the selected entries to the top level",           // Move Entries Top Level
+    "Move the marked entries into the current folder",      // Move Entries
+    "Move the marked entries to the top level",             // Move Entries Top Level
     "Swap the selected entry with its above sibling",       // Move Up
     "Swap the selected entry with its below sibling",       // Move Below
     "Open all folds",                                       // Open All Folds
