@@ -27,14 +27,6 @@ pub fn build_command() -> Command {
                 .conflicts_with("config")
                 .action(ArgAction::SetTrue),
         )
-        .arg(
-            Arg::new("save_file")
-                .short('s')
-                .long("save-file")
-                .help("Path to save file")
-                .value_parser(ValueParser::path_buf())
-                .value_name("FILE"),
-        )
         .subcommands(commands::create_entry_subcommands())
         .subcommand(commands::create_game_subcommand())
         .subcommand(commands::create_profile_subcommand())
