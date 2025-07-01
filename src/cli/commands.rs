@@ -15,14 +15,14 @@ pub fn create_entry_subcommands() -> Vec<Command> {
         .add(ArgValueCompleter::new(completion::entry_completer));
 
     vec![
-        Command::new("list").about("list save states"),
+        Command::new("list").about("list save files"),
         Command::new("load")
             .about("load save file")
             .arg(&relative_path)
             .arg(&fuzzy),
         Command::new("import").about("import save file"),
         Command::new("rename")
-            .about("rename save state")
+            .about("rename save file")
             .arg(Arg::new("new_name").required(true).value_name("NEW_NAME"))
             .arg({
                 relative_path = relative_path.required_unless_present("fuzzy");
