@@ -29,6 +29,15 @@ you can configure the icons in [`config.toml`](#configuration).
 cargo install bawa
 ```
 
+### Arch Linux
+
+**bawa** can be installed from the [AUR](https://aur.archlinux.org/packages/bawa)
+using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers).
+
+```sh
+paru -S bawa
+```
+
 ## Usage
 
 Run **bawa** to launch the TUI.
