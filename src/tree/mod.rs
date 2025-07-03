@@ -268,6 +268,40 @@ impl<T> Tree<T> {
         self.update_neighbours(parent, prev, next);
     }
 
+    /// Detaches [entry](NodeId) and reattaches it relative to
+    /// [relative](NodeId) using the `f` method.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use bawa::tree::Tree;
+    /// let mut tree = Tree::default();
+    ///
+    /// let r = tree.add_value("r");
+    /// let a = tree.add_value("a");
+    /// let b = tree.add_value("b");
+    /// let a_c = tree.add_value("c");
+    ///
+    /// tree.append(r, a);
+    /// tree.append(a, a_c);
+    /// tree.append(r, b);
+    ///
+    /// tree.move_entry(Tree::prepend, b, a);
+    ///
+    /// assert!(tree[b].previous_sibling().is_none());
+    /// assert_eq!(tree[b].first_child(), Some(a));
+    ///
+    /// ```
+    pub fn move_entry(
+        &mut self,
+        f: fn(&mut Self, NodeId, NodeId),
+        relative: NodeId,
+        entry: NodeId,
+    ) {
+        self.detach(entry);
+        f(self, relative, entry);
+    }
+
     /// Returns `true` if the node is not connected to the root node.
     ///
     /// # Examples
@@ -608,8 +642,7 @@ mod tests {
         tree.append(r, b);
         tree.append(r, c);
 
-        tree.detach(a);
-        tree.insert_after(c, a);
+        tree.move_entry(Tree::insert_after, c, a);
 
         let mut iter = tree.children(r);
 

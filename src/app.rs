@@ -15,7 +15,7 @@ use crate::{
     input::{self, Input, Mode},
     message::{set_msg_if_error, Message},
     search::Search,
-    tree::{Node, NodeId, TreeState},
+    tree::{Node, NodeId, Tree, TreeState},
     ui::{
         self,
         confirmation::{Context as ConfirmationContext, Prompt},
@@ -43,6 +43,7 @@ pub struct App {
     pub fuzzy_finder: FuzzyFinder,
     pub game_creation: CreatingGame,
     pub watcher: Watcher,
+    pending_move: Option<HandleMove>,
     rx: UnboundedReceiver<Event>,
 }
 
@@ -60,6 +61,7 @@ impl App {
             fuzzy_finder: FuzzyFinder::default(),
             game_creation: CreatingGame::default(),
             watcher: Watcher::new(tx.clone())?,
+            pending_move: None,
             rx,
         };
 
@@ -414,23 +416,68 @@ impl App {
     }
 
     pub fn move_entries(&mut self, top_level: bool) {
+        if self.tree_state.marked.is_empty() {
+            return;
+        }
+
+        let Some(selected) = self.tree_state.selected else {
+            return;
+        };
+
         let base_path = self.context_path(top_level);
+        let mut moved_outside: u32 = 0;
+        let mut moved_in = false;
         let mut fail = false;
 
-        let entries = self.games.get_entries().unwrap();
+        let profile = self.games.get_profile_mut().unwrap();
+        let entries = &mut profile.entries;
 
-        for entry in self.tree_state.marked.drain().map(|id| &entries[id]) {
+        for id in self.tree_state.marked.drain() {
+            let entry = &entries[id];
             let new_path = base_path.join(entry.name());
 
             if entry.path == new_path {
-                continue;
-            }
-
-            if utils::check_for_dup(&new_path).is_err()
+                moved_in = true;
+                if entries[selected].is_folder() && !top_level {
+                    entries.move_entry(Tree::prepend, selected, id);
+                } else {
+                    entries.move_entry(Tree::insert_after, selected, id);
+                }
+            } else if utils::check_for_dup(&new_path).is_err()
                 || std::fs::rename(&entry.path, new_path).is_err()
             {
                 fail = true;
+            } else {
+                moved_outside += 1;
             }
+        }
+
+        if moved_outside != 0 {
+            let mut id = selected;
+            let method: fn(&mut Tree<Entry>, NodeId, NodeId);
+
+            if top_level {
+                if let Some(ancestor) = entries
+                    .ancestors(id)
+                    .take_while(|id| *id != NodeId::root())
+                    .last()
+                {
+                    id = ancestor;
+                }
+                method = Tree::insert_after;
+            } else {
+                method = if entries[id].is_folder() {
+                    Tree::prepend
+                } else {
+                    Tree::insert_after
+                }
+            }
+
+            self.pending_move = Some(HandleMove::new(moved_outside, id, method));
+        }
+
+        if moved_in {
+            set_msg_if_error!(self.message, profile.write_state());
         }
 
         if fail {
@@ -448,11 +495,9 @@ impl App {
         let entries = &mut profile.entries;
 
         if let Some(swap_with) = entries[id].previous_sibling() {
-            entries.detach(id);
-            entries.insert_before(swap_with, id);
+            entries.move_entry(Tree::insert_before, swap_with, id);
         } else if let Some(swap_with) = entries.following_siblings(id).next_back() {
-            entries.detach(id);
-            entries.insert_after(swap_with, id);
+            entries.move_entry(Tree::insert_after, swap_with, id);
         } else {
             return;
         }
@@ -469,11 +514,9 @@ impl App {
         let entries = &mut profile.entries;
 
         if let Some(swap_with) = entries[id].next_sibling() {
-            entries.detach(id);
-            entries.insert_after(swap_with, id);
+            entries.move_entry(Tree::insert_after, swap_with, id);
         } else if let Some(swap_with) = entries.preceding_siblings(id).next_back() {
-            entries.detach(id);
-            entries.insert_before(swap_with, id);
+            entries.move_entry(Tree::insert_before, swap_with, id);
         } else {
             return;
         }
@@ -723,6 +766,27 @@ impl App {
     }
 }
 
+struct HandleMove {
+    count: u32,
+    relative: NodeId,
+    method: fn(&mut Tree<Entry>, NodeId, NodeId),
+}
+
+impl HandleMove {
+    fn new(count: u32, relative: NodeId, method: fn(&mut Tree<Entry>, NodeId, NodeId)) -> Self {
+        Self {
+            count,
+            relative,
+            method,
+        }
+    }
+
+    fn execute(&mut self, entries: &mut Tree<Entry>, id: NodeId) {
+        entries.move_entry(self.method, self.relative, id);
+        self.count = self.count.saturating_sub(1);
+    }
+}
+
 impl HandleFileSystemEvent for App {
     fn on_create(&mut self, path: &Path) -> Result<()> {
         let Some(entries) = self.games.get_entries_mut() else {
@@ -757,23 +821,26 @@ impl HandleFileSystemEvent for App {
             return Ok(());
         };
 
-        let entries = &mut profile.entries;
-
-        let Some(entry_id) = entries.find_by_path(path) else {
+        let Some(entry_id) = profile.entries.find_by_path(path) else {
             return Ok(());
         };
 
-        if path.parent() != new_path.parent() {
-            entries.detach(entry_id);
-            if let Some(new_parent) = new_path
-                .parent()
-                .and_then(|path| entries.find_by_path(path))
-            {
-                entries.append(new_parent, entry_id);
+        if let Some(handle) = &mut self.pending_move {
+            handle.execute(&mut profile.entries, entry_id);
+            if handle.count == 0 {
+                self.pending_move = None;
+                set_msg_if_error!(self.message, profile.write_state());
             }
+        } else if let Some(new_parent) = new_path
+            .parent()
+            .and_then(|path| profile.entries.find_by_path(path))
+        {
+            profile
+                .entries
+                .move_entry(Tree::append, new_parent, entry_id);
         }
 
-        entries.update_paths(entry_id, new_path)?;
+        profile.entries.update_paths(entry_id, new_path)?;
 
         if matches!(profile.get_active_save_file(), Some(active_path) if active_path == path) {
             profile.update_active_save_file(new_path)?;
