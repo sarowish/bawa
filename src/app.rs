@@ -234,7 +234,7 @@ impl App {
             }
             Step::EnterPath => {
                 let path = PathBuf::from(input.unwrap());
-                Games::create_game(state.name.as_ref().unwrap(), &path)?;
+                Games::create_game(&mut self.games, state.name.as_ref().unwrap(), &path)?;
                 self.mode.select_previous();
             }
             _ => unreachable!(),

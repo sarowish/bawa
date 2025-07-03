@@ -233,6 +233,7 @@ fn handle_key_game_creation_mode(key: KeyEvent, app: &mut App) -> bool {
                                     app.games.get_game_unchecked_mut().set_savefile_path(path)
                                 } else {
                                     Games::create_game(
+                                        &mut app.games,
                                         state.name.as_ref().unwrap(),
                                         &PathBuf::from(path),
                                     )
@@ -409,7 +410,7 @@ fn complete(app: &mut App) {
         }
         Mode::ProfileCreation => {
             let name = &app.extract_input();
-            app.games.get_game_unchecked().create_profile(name)
+            app.games.get_game_unchecked_mut().create_profile(name)
         }
         Mode::ProfileRenaming => {
             let new_name = app.extract_input();

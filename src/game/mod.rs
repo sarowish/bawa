@@ -10,6 +10,7 @@ use profile::Profile;
 use std::{
     fmt::Display,
     fs::{self, File},
+    mem,
     path::PathBuf,
 };
 use std::{io::Write, path::Path};
@@ -47,6 +48,7 @@ pub struct Game {
     pub savefile_path: Option<PathBuf>,
     pub profiles: StatefulList<Profile>,
     pub active_profile: Option<usize>,
+    pub pending_create: bool,
 }
 
 impl Game {
@@ -56,6 +58,7 @@ impl Game {
             savefile_path: None,
             profiles: StatefulList::with_items(Vec::new()),
             active_profile: None,
+            pending_create: false,
         }
     }
 
@@ -100,7 +103,7 @@ impl Game {
         utils::write_atomic(&self.path.join(".state"), &bincode::serialize(self)?)
     }
 
-    pub fn create_profile(&self, name: &str) -> Result<()> {
+    pub fn create_profile(&mut self, name: &str) -> Result<()> {
         if name.is_empty() {
             return Err(anyhow::anyhow!("Name can't be empty."));
         }
@@ -108,6 +111,8 @@ impl Game {
         let path = self.path.join(name);
         utils::check_for_dup(&path)?;
         std::fs::create_dir(&path)?;
+
+        self.pending_create = true;
 
         Ok(())
     }
@@ -191,6 +196,10 @@ impl HandleFileSystemEvent for Game {
     fn on_create(&mut self, path: &Path) -> Result<()> {
         self.profiles.push(Profile::new(path.to_owned()));
 
+        if mem::take(&mut self.pending_create) {
+            self.profiles.select_last();
+        }
+
         Ok(())
     }
 
@@ -234,6 +243,7 @@ impl HandleFileSystemEvent for Game {
 pub struct Games {
     pub inner: StatefulList<Game>,
     pub active_game: Option<usize>,
+    pending_create: bool,
 }
 
 impl Games {
@@ -252,10 +262,11 @@ impl Games {
         Ok(Self {
             inner: StatefulList::with_items(games),
             active_game,
+            pending_create: false,
         })
     }
 
-    pub fn create_game(name: &str, savefile_path: &Path) -> Result<()> {
+    pub fn create_game(&mut self, name: &str, savefile_path: &Path) -> Result<()> {
         if name.is_empty() {
             return Err(anyhow::anyhow!("Name can't be empty."));
         }
@@ -267,6 +278,8 @@ impl Games {
         let mut game = Game::new(path);
         game.savefile_path = Some(savefile_path.to_owned());
         game.write_state()?;
+
+        self.pending_create = true;
 
         Ok(())
     }
@@ -358,6 +371,10 @@ impl Games {
 impl HandleFileSystemEvent for Games {
     fn on_create(&mut self, path: &Path) -> Result<()> {
         self.inner.push(Game::new(path.to_owned()));
+
+        if mem::take(&mut self.pending_create) {
+            self.inner.select_last();
+        }
 
         Ok(())
     }

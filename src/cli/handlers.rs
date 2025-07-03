@@ -119,6 +119,7 @@ pub fn handle_game_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     match args.subcommand() {
         Some(("create", args)) => {
             Games::create_game(
+                &mut app.games,
                 args.get_one::<String>("game_name").unwrap(),
                 args.get_one::<PathBuf>("savefile_path").unwrap(),
             )?;
