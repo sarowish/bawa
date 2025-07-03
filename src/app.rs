@@ -421,6 +421,11 @@ impl App {
 
         for entry in self.tree_state.marked.drain().map(|id| &entries[id]) {
             let new_path = base_path.join(entry.name());
+
+            if entry.path == new_path {
+                continue;
+            }
+
             if utils::check_for_dup(&new_path).is_err()
                 || std::fs::rename(&entry.path, new_path).is_err()
             {
