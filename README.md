@@ -42,7 +42,7 @@ paru -S bawa
 
 Run `bawa` to launch the TUI.
 
-```sh
+```
 Usage: bawa [OPTIONS] [COMMAND]
 
 Commands:
