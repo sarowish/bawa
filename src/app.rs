@@ -833,10 +833,10 @@ impl HandleFileSystemEvent for App {
             handle.execute(&mut profile.entries, entry_id);
             if handle.count == 0 {
                 self.pending_move = None;
-                set_msg_if_error!(self.message, profile.write_state());
             }
         } else if let Some(new_parent) = new_path
             .parent()
+            .filter(|parent| Some(*parent) != path.parent())
             .and_then(|path| profile.entries.find_by_path(path))
         {
             profile
@@ -848,6 +848,8 @@ impl HandleFileSystemEvent for App {
 
         if matches!(profile.get_active_save_file(), Some(active_path) if active_path == path) {
             profile.update_active_save_file(new_path)?;
+        } else {
+            set_msg_if_error!(self.message, profile.write_state());
         }
 
         Ok(())
