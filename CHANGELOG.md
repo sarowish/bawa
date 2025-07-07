@@ -11,3 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Select the newly created games and profiles in the list.
 - Place entries relative to the currently selected entry when performing a move operation.
+
+### Fixed
+
+- Handle file move events where the destination or the source is outside the watched directories.

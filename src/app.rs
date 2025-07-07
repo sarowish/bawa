@@ -60,7 +60,7 @@ impl App {
             search: Search::default(),
             fuzzy_finder: FuzzyFinder::default(),
             game_creation: CreatingGame::default(),
-            watcher: Watcher::new(tx.clone())?,
+            watcher: Watcher::new(tx)?,
             pending_move: None,
             rx,
         };
@@ -106,6 +106,10 @@ impl App {
                     }
                 }
                 Event::FileSystem(event) => {
+                    let Some(event) = self.watcher.handle_event(event) else {
+                        continue;
+                    };
+
                     let res = match event.context {
                         EventContext::Game => self.on_game_event(&event),
                         EventContext::Profile => self.on_profile_event(&event),
