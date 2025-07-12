@@ -678,6 +678,26 @@ impl App {
         }
     }
 
+    pub fn load_random_save_file(&mut self) {
+        let Some(entries) = self.games.get_entries_mut() else {
+            return;
+        };
+
+        let save_files = entries
+            .iter_ids()
+            .filter(|id| !entries.detached_from_root(*id) && entries[*id].is_file())
+            .collect::<Vec<NodeId>>();
+
+        let id = fastrand::choice(save_files);
+        self.tree_state.select(id, entries);
+
+        if let Some(entries) = self.games.get_entries()
+            && let Some(entry) = id.map(|id| &entries[id])
+        {
+            set_msg_if_error!(self.message, self.load_save_file(&entry.path.clone(), true));
+        }
+    }
+
     pub fn load_active_save_file(&mut self) {
         if let Some(path) = self.games.get_profile().unwrap().get_active_save_file() {
             set_msg_if_error!(self.message, self.load_save_file(&path, false));

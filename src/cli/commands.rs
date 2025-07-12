@@ -19,7 +19,15 @@ pub fn create_entry_subcommands() -> Vec<Command> {
         Command::new("load")
             .about("load save file")
             .arg(&relative_path)
-            .arg(&fuzzy),
+            .arg(&fuzzy)
+            .arg(
+                Arg::new("random")
+                    .help("load a random save file")
+                    .short('r')
+                    .conflicts_with("fuzzy")
+                    .long("random")
+                    .action(ArgAction::SetTrue),
+            ),
         Command::new("import").about("import save file"),
         Command::new("rename")
             .about("rename save file")

@@ -2,7 +2,7 @@ use crate::{config::KEY_BINDINGS, ui::Scroller};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::ops::Deref;
 
-const DESCRIPTIONS_LEN: usize = 36;
+const DESCRIPTIONS_LEN: usize = 37;
 const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Go one line downward",                                 // On Down
     "Go one line upward",                                   // On Up
@@ -14,6 +14,7 @@ const DESCRIPTIONS: [&str; DESCRIPTIONS_LEN] = [
     "Jump to the folder above",                             // Up Directory
     "Jump to the parent folder",                            // Jump To Parent
     "Load the selected save file",                          // Load Save File
+    "Load a random save file",                              // Load Random Save File
     "Load the active save file",                            // Load Active Save File
     "Mark the selected save file as active",                // Mark Save File
     "Import save file into the current folder",             // Import Save File

@@ -110,6 +110,7 @@ dependencies = [
  "clap_complete",
  "crossterm 0.29.0",
  "dirs",
+ "fastrand",
  "futures",
  "indexmap",
  "notify",

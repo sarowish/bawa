@@ -34,6 +34,7 @@ help = { fg = "Green" }
 "K" = "up_directory"
 "shift-up" = "up_directory"
 "f" = "load_save_file"
+"shift-alt-f" = "load_random_save_file"
 "ctrl-f" = "load_active_save_file"
 "F" = "mark_save_file"
 "i" = "import_save_file"

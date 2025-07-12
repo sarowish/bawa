@@ -10,6 +10,7 @@ pub enum Command {
     UpDirectory,
     JumpToParent,
     LoadSaveFile,
+    LoadRandomSaveFile,
     LoadActiveSaveFile,
     MarkSaveFile,
     ImportSaveFile,

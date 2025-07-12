@@ -64,6 +64,8 @@ pub fn handle_load_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
         app.load_save_file(&path, true)?;
     } else if !any_args(args) {
         app.load_active_save_file();
+    } else if args.get_flag("random") {
+        app.load_random_save_file();
     } else {
         std::process::exit(1)
     }

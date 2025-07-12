@@ -53,6 +53,7 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::UpDirectory => app.up_directory(),
             Command::JumpToParent => app.jump_to_parent(),
             Command::LoadSaveFile => app.load_selected_save_file(),
+            Command::LoadRandomSaveFile => app.load_random_save_file(),
             Command::LoadActiveSaveFile => app.load_active_save_file(),
             Command::MarkSaveFile => app.mark_selected_save_file(),
             Command::ImportSaveFile => app.import_save_file(false),
