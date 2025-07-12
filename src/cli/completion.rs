@@ -1,7 +1,7 @@
 use crate::{
     config::SKIP_CONFIG,
     fuzzy_finder::FuzzyFinder,
-    game::{get_active_game, profile::Profile, read_games, Game, Games},
+    game::{Game, Games, get_active_game, profile::Profile, read_games},
     utils,
 };
 use clap_complete::CompletionCandidate;

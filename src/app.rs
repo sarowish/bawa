@@ -1,19 +1,19 @@
 use crate::{
-    config::{options, OPTIONS},
+    config::{OPTIONS, options},
     entry::Entry,
     event::Event,
     fuzzy_finder::{
-        picker::{Global, Local},
         FuzzyFinder,
+        picker::{Global, Local},
     },
     game::{
+        Games,
         creation::{CreatingGame, Step},
         profile::Profile,
-        Games,
     },
     help::Help,
     input::{self, Input, Mode},
-    message::{set_msg_if_error, Message},
+    message::{Message, set_msg_if_error},
     search::Search,
     tree::{Node, NodeId, Tree, TreeState},
     ui::{
@@ -25,7 +25,7 @@ use crate::{
         Context as EventContext, FileSystemEvent, HandleFileSystemEvent, Kind as EventKind, Watcher,
     },
 };
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
 use ratatui::widgets::ListState;
@@ -756,7 +756,7 @@ impl App {
             if let Some(picker) = self.fuzzy_finder.picker.take() {
                 picker.jump(idx, self);
             }
-        };
+        }
     }
 
     pub fn mark_entry(&mut self) {

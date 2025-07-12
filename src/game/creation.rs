@@ -1,5 +1,5 @@
 use crate::app::StatefulList;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::{fmt::Display, path::Path};
 
 pub struct Preset {

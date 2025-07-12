@@ -1,8 +1,8 @@
 use crate::{event::Event, utils};
 use anyhow::Result;
 use notify::{
-    event::{CreateKind, Event as NotifyEvent, ModifyKind, RemoveKind, RenameMode},
     EventKind, RecommendedWatcher, RecursiveMode, Watcher as NotifyWatcher,
+    event::{CreateKind, Event as NotifyEvent, ModifyKind, RemoveKind, RenameMode},
 };
 use std::{
     collections::HashMap,

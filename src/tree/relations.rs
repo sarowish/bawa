@@ -1,4 +1,4 @@
-use super::{id::NodeId, Tree};
+use super::{Tree, id::NodeId};
 
 impl<T> Tree<T> {
     pub fn on_insert(

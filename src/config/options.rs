@@ -1,6 +1,6 @@
 use super::MergeConfig;
 use anyhow::Result;
-use serde::{de, Deserialize};
+use serde::{Deserialize, de};
 use std::collections::HashMap;
 
 #[derive(Deserialize)]
@@ -140,7 +140,7 @@ impl MergeConfig for Options {
 #[cfg(test)]
 mod tests {
     use super::UserOptions;
-    use crate::config::{options::RenameOptions, tests::read_example_config, Config};
+    use crate::config::{Config, options::RenameOptions, tests::read_example_config};
 
     #[test]
     fn example_up_to_date() {

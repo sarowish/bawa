@@ -358,7 +358,7 @@ impl<T> Tree<T> {
     ///
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn iter_ids(&self) -> impl Iterator<Item = NodeId> {
+    pub fn iter_ids(&self) -> impl Iterator<Item = NodeId> + use<T> {
         self.descendants(NodeId::root())
             .collect::<Vec<NodeId>>()
             .into_iter()

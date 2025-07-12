@@ -1,14 +1,14 @@
 use crate::{
     app::StatefulList,
-    input::{handle_key_fuzzy_mode, Input},
+    input::{Input, handle_key_fuzzy_mode},
     ui,
 };
 use anyhow::Result;
 use crossterm::event::{Event, KeyCode};
 use item::Matched;
 use nucleo_matcher::{
-    pattern::{CaseMatching, Normalization, Pattern},
     Config, Matcher, Utf32String,
+    pattern::{CaseMatching, Normalization, Pattern},
 };
 use picker::Picker;
 

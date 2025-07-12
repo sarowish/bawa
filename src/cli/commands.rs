@@ -1,5 +1,5 @@
 use super::completion;
-use clap::{builder::ValueParser, value_parser, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, builder::ValueParser, value_parser};
 use clap_complete::ArgValueCompleter;
 
 pub fn create_entry_subcommands() -> Vec<Command> {

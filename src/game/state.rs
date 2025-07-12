@@ -1,6 +1,6 @@
-use super::{profile::Profile, Game};
+use super::{Game, profile::Profile};
 use crate::tree::{NodeId, Tree};
-use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer, ser::SerializeStruct};
 
 #[derive(Deserialize)]
 pub struct GameState {

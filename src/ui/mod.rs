@@ -1,11 +1,11 @@
 use crate::input::Input;
 use crossterm::{
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
-    layout::Rect, prelude::CrosstermBackend, DefaultTerminal, Frame, Terminal, TerminalOptions,
-    Viewport,
+    DefaultTerminal, Frame, Terminal, TerminalOptions, Viewport, layout::Rect,
+    prelude::CrosstermBackend,
 };
 use std::{io::stdout, panic, sync::Once};
 

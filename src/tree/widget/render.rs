@@ -111,8 +111,8 @@ impl Tree<'_> {
 #[cfg(test)]
 mod tests {
     use crate::tree::{
-        widget::{item::TreeItem, state::TreeState, tree::Tree},
         NodeId,
+        widget::{item::TreeItem, state::TreeState, tree::Tree},
     };
 
     #[test]

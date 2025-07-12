@@ -1,6 +1,6 @@
 use crate::tree::{
-    traverse::{next_start, Traverse},
     NodeId, Tree,
+    traverse::{Traverse, next_start},
 };
 use std::collections::HashSet;
 

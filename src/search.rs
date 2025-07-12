@@ -1,8 +1,8 @@
 use crate::{app::App, config::OPTIONS, game::creation::Step, input::Mode, tree::NodeId};
 use anyhow::Result;
 use nucleo_matcher::{
-    pattern::{AtomKind, CaseMatching, Normalization, Pattern},
     Matcher, Utf32String,
+    pattern::{AtomKind, CaseMatching, Normalization, Pattern},
 };
 
 #[derive(Default, Copy, Clone)]

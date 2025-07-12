@@ -91,7 +91,10 @@ impl Input {
             return;
         }
 
-        let (offset, ch) = self.text[..self.idx].grapheme_indices(true).next_back().unwrap();
+        let (offset, ch) = self.text[..self.idx]
+            .grapheme_indices(true)
+            .next_back()
+            .unwrap();
         self.cursor_position -= ch.width() as u16;
         self.clear_range(offset..self.idx);
         self.idx = offset;
@@ -103,7 +106,10 @@ impl Input {
             return;
         }
 
-        let (offset, ch) = self.text[..self.idx].grapheme_indices(true).next_back().unwrap();
+        let (offset, ch) = self.text[..self.idx]
+            .grapheme_indices(true)
+            .next_back()
+            .unwrap();
         self.cursor_position -= ch.width() as u16;
         self.idx = offset;
         self.check_lower_bound();

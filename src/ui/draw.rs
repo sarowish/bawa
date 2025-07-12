@@ -10,11 +10,11 @@ use crate::{
     tree::widget::Tree,
 };
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Layout, Margin, Rect},
     style::Style,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
-    Frame,
 };
 use std::fmt::Display;
 

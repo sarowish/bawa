@@ -1,6 +1,7 @@
-use super::{popup::window_from_dimensions, Scroller};
+use super::{Scroller, popup::window_from_dimensions};
 use crate::{app::App, config::THEME};
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Layout, Offset, Rect},
     prelude::Buffer,
     style::{Style, Stylize},
@@ -9,7 +10,6 @@ use ratatui::{
         Block, BorderType, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation,
         ScrollbarState, StatefulWidget, Widget, Wrap,
     },
-    Frame,
 };
 
 pub fn draw_confirmation_window(f: &mut Frame, prompt: &mut Prompt) {
@@ -64,11 +64,13 @@ impl Prompt {
                 vec![app.games.inner.get_selected().unwrap().name().into_owned()]
             }
             Context::ProfileDeletion => {
-                vec![(app.games.get_profiles())
-                    .get_selected()
-                    .unwrap()
-                    .name()
-                    .into_owned()]
+                vec![
+                    (app.games.get_profiles())
+                        .get_selected()
+                        .unwrap()
+                        .name()
+                        .into_owned(),
+                ]
             }
         };
 

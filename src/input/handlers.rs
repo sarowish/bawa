@@ -9,8 +9,8 @@ use crate::{
     config::{KEY_BINDINGS, OPTIONS},
     fuzzy_finder::FuzzyFinder,
     game::{
-        creation::{CreatingGame, Step},
         Games,
+        creation::{CreatingGame, Step},
     },
     help::Help,
     message::set_msg_if_error,

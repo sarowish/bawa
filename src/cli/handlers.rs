@@ -3,11 +3,11 @@ use crate::{
     app::App,
     fuzzy_finder::picker::Local,
     game::{Game, Games},
-    tree::{widget::Tree, TreeState},
+    tree::{TreeState, widget::Tree},
     utils,
 };
 use anyhow::{Context, Result};
-use clap::{parser::ValueSource, ArgMatches};
+use clap::{ArgMatches, parser::ValueSource};
 use crossterm::style::Stylize;
 use std::path::PathBuf;
 

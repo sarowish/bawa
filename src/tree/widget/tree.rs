@@ -1,7 +1,7 @@
 use super::item::TreeItem;
 use crate::tree::{
-    traverse::{Edge, Traverse},
     NodeId,
+    traverse::{Edge, Traverse},
 };
 use ratatui::{style::Style, widgets::Block};
 use std::fmt::Display;

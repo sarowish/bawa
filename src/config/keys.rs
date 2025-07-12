@@ -251,7 +251,7 @@ impl DerefMut for KeyBindings {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{keys::UserKeyBindings, tests::read_example_config, Config};
+    use crate::config::{Config, keys::UserKeyBindings, tests::read_example_config};
 
     #[test]
     fn example_up_to_date() {
@@ -268,7 +268,9 @@ mod tests {
 
         assert!(general.is_some_and(|keys| keys.len() == default.general.len()));
         assert!(game_selection.is_some_and(|keys| keys.len() == default.game_selection.len()));
-        assert!(profile_selection.is_some_and(|keys| keys.len() == default.profile_selection.len()));
+        assert!(
+            profile_selection.is_some_and(|keys| keys.len() == default.profile_selection.len())
+        );
         assert!(help.is_some_and(|keys| keys.len() == default.help.len()));
         assert!(confirmation.is_some_and(|keys| keys.len() == default.confirmation.len()));
     }

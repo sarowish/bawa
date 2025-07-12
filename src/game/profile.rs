@@ -5,7 +5,7 @@ use crate::utils;
 use anyhow::Result;
 use std::fmt::Display;
 use std::fs;
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 
 pub struct Profile {
     pub path: PathBuf,
