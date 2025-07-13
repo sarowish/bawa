@@ -31,8 +31,8 @@ cargo install bawa
 
 ### Arch Linux
 
-**bawa** can be installed from the [AUR](https://aur.archlinux.org/packages/bawa)
-using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers).
+[bawa](https://aur.archlinux.org/packages/bawa) and [bawa-git](https://aur.archlinux.org/packages/bawa-git)
+packages are available in the AUR. They can be installed using an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers).
 
 ```sh
 paru -S bawa
