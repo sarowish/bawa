@@ -16,3 +16,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Handle file move events where the destination or the source is outside the watched directories.
+- Update the savefile path of the selected game instead of the active game when setting paths.

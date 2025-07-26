@@ -231,7 +231,8 @@ fn handle_key_game_creation_mode(key: KeyEvent, app: &mut App) -> bool {
                             set_msg_if_error!(
                                 app.message,
                                 if state.edit {
-                                    app.games.get_game_unchecked_mut().set_savefile_path(path)
+                                    let game = app.games.inner.get_selected_mut().unwrap();
+                                    game.set_savefile_path(path)
                                 } else {
                                     Games::create_game(
                                         &mut app.games,
@@ -398,9 +399,8 @@ fn complete(app: &mut App) {
         Mode::GameCreation => {
             if app.game_creation.edit {
                 let savefile_path = &app.extract_input();
-                app.games
-                    .get_game_unchecked_mut()
-                    .set_savefile_path(savefile_path)
+                let game = app.games.inner.get_selected_mut().unwrap();
+                game.set_savefile_path(savefile_path)
             } else {
                 app.handle_game_creation()
             }
