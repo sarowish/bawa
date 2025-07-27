@@ -348,25 +348,36 @@ impl App {
         self.footer_input = None;
     }
 
-    pub fn context_path(&mut self, top_level: bool) -> PathBuf {
+    pub fn context_node_id(&self, top_level: bool) -> NodeId {
+        let entries = self.games.get_entries().unwrap();
+
+        (!top_level)
+            .then_some(self.tree_state.selected.and_then(|id| entries.context(id)))
+            .flatten()
+            .unwrap_or(NodeId::root())
+    }
+
+    pub fn context_node(&mut self, top_level: bool) -> &mut Node<Entry> {
         let entries = self.games.get_entries_mut().unwrap();
 
         let id = (!top_level)
             .then_some(self.tree_state.selected.and_then(|id| entries.context(id)))
             .flatten()
             .unwrap_or(NodeId::root());
-        let node = &mut entries[id];
 
-        node.expanded = Some(true);
-        node.path.clone()
+        &mut entries[id]
     }
 
     pub fn create_folder(&mut self, top_level: bool) -> Result<()> {
         let file_name = self.extract_input();
         ensure!(!file_name.is_empty(), "Name can't be empty.");
-        let path = self.context_path(top_level).join(file_name);
+        let node = self.context_node(top_level);
+        let path = node.path.join(file_name);
         utils::check_for_dup(&path)?;
-        Ok(std::fs::create_dir(&path)?)
+        std::fs::create_dir(&path)?;
+        node.expanded = Some(true);
+
+        Ok(())
     }
 
     pub fn enter_renaming(&mut self) {
@@ -428,13 +439,14 @@ impl App {
             return;
         };
 
-        let base_path = self.context_path(top_level);
+        let context_id = self.context_node_id(top_level);
         let mut moved_outside: u32 = 0;
         let mut moved_in = false;
         let mut fail = false;
 
         let profile = self.games.get_profile_mut().unwrap();
         let entries = &mut profile.entries;
+        let base_path = entries[context_id].path.clone();
 
         for id in self.tree_state.marked.drain() {
             let entry = &entries[id];
@@ -456,7 +468,11 @@ impl App {
             }
         }
 
-        if moved_outside != 0 {
+        if moved_in || moved_outside > 0 {
+            entries[context_id].expanded = Some(true);
+        }
+
+        if moved_outside > 0 {
             let mut id = selected;
             let method: fn(&mut Tree<Entry>, NodeId, NodeId);
 
@@ -732,15 +748,15 @@ impl App {
             return;
         };
 
-        let mut path = self
-            .context_path(top_level)
-            .join(savefile_path.file_name().unwrap());
+        let node = self.context_node(top_level);
+        let mut path = node.path.join(savefile_path.file_name().unwrap());
         utils::validate_name(&mut path);
 
-        set_msg_if_error!(
-            self.message,
-            std::fs::copy(&savefile_path, &path).map_err(Into::into)
-        );
+        if let Err(e) = std::fs::copy(&savefile_path, &path) {
+            self.message.set_error(&e.into());
+        } else {
+            node.expanded = Some(true);
+        }
     }
 
     pub fn replace_save_file(&mut self) -> Result<()> {
