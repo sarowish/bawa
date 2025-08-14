@@ -409,7 +409,7 @@ impl<T> Tree<T> {
     /// assert_eq!(iter.next(), Some(b_e));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn children(&self, parent: NodeId) -> Children<T> {
+    pub fn children(&self, parent: NodeId) -> Children<'_, T> {
         Children::new(parent, self)
     }
 
@@ -435,7 +435,7 @@ impl<T> Tree<T> {
     /// assert_eq!(iter.next(), Some(r));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn ancestors(&self, node: NodeId) -> Ancestors<T> {
+    pub fn ancestors(&self, node: NodeId) -> Ancestors<'_, T> {
         skip_first!(Ancestors::new(node, self))
     }
 

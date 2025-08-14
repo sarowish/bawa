@@ -14,7 +14,7 @@ type Handle = (PathBuf, JoinHandle<()>);
 
 pub struct Watcher {
     inner: RecommendedWatcher,
-    pub handles: HashMap<usize, Handle>,
+    pub handles: HashMap<Option<usize>, Handle>,
     tx: UnboundedSender<Event>,
 }
 
@@ -45,14 +45,14 @@ impl Watcher {
 
         Ok(Self {
             inner: watcher,
-            handles: HashMap::<usize, Handle>::new(),
+            handles: HashMap::<Option<usize>, Handle>::new(),
             tx,
         })
     }
 
     pub fn handle_event(&mut self, mut event: NotifyEvent) -> Option<FileSystemEvent> {
         if let EventKind::Modify(ModifyKind::Name(rename_mode)) = event.kind {
-            let tracker = event.tracker()?;
+            let tracker = event.tracker();
 
             match rename_mode {
                 RenameMode::From => {
