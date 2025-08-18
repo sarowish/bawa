@@ -462,7 +462,7 @@ impl<T> Tree<T> {
     /// assert_eq!(iter.next(), Some(r));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn predecessors(&self, node: NodeId) -> Predecessors<T> {
+    pub fn predecessors(&self, node: NodeId) -> Predecessors<'_, T> {
         skip_first!(Predecessors::new(node, self))
     }
 
@@ -490,7 +490,7 @@ impl<T> Tree<T> {
     /// assert_eq!(iter.next(), Some(c));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn following_siblings(&self, node: NodeId) -> FollowingSiblings<T> {
+    pub fn following_siblings(&self, node: NodeId) -> FollowingSiblings<'_, T> {
         FollowingSiblings::new(node, self)
     }
 
@@ -521,7 +521,7 @@ impl<T> Tree<T> {
     /// assert_eq!(iter.next(), Some(a));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn preceding_siblings(&self, node: NodeId) -> PrecedingSiblings<T> {
+    pub fn preceding_siblings(&self, node: NodeId) -> PrecedingSiblings<'_, T> {
         PrecedingSiblings::new(node, self)
     }
 
@@ -552,7 +552,7 @@ impl<T> Tree<T> {
     ///
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn descendants(&self, ancestor: NodeId) -> Descendants<T> {
+    pub fn descendants(&self, ancestor: NodeId) -> Descendants<'_, T> {
         Descendants::new(ancestor, self)
     }
 
@@ -584,7 +584,7 @@ impl<T> Tree<T> {
     ///
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn visible(&self, ancestor: NodeId) -> Visible<T> {
+    pub fn visible(&self, ancestor: NodeId) -> Visible<'_, T> {
         skip_first!(Visible::new(ancestor, self))
     }
 }
