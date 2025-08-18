@@ -99,10 +99,10 @@ impl App {
 
             match event {
                 Event::Crossterm(term_event) => {
-                    if let CrosstermEvent::Key(key) = term_event {
-                        if input::handle_event(key, &mut self) {
-                            break;
-                        }
+                    if let CrosstermEvent::Key(key) = term_event
+                        && input::handle_event(key, &mut self)
+                    {
+                        break;
                     }
                 }
                 Event::FileSystem(event) => {
@@ -599,10 +599,10 @@ impl App {
         }
     }
     pub fn on_right(&mut self) {
-        if let Some(entry) = self.selected_entry_mut() {
-            if entry.is_collapsed() {
-                entry.toggle_fold();
-            }
+        if let Some(entry) = self.selected_entry_mut()
+            && entry.is_collapsed()
+        {
+            entry.toggle_fold();
         }
     }
 
@@ -686,11 +686,11 @@ impl App {
     }
 
     pub fn load_selected_save_file(&mut self) {
-        if let Some(entry) = self.selected_entry() {
-            if entry.is_file() {
-                let path = entry.path.clone();
-                set_msg_if_error!(self.message, self.load_save_file(&path, true));
-            }
+        if let Some(entry) = self.selected_entry()
+            && entry.is_file()
+        {
+            let path = entry.path.clone();
+            set_msg_if_error!(self.message, self.load_save_file(&path, true));
         }
     }
 
@@ -760,14 +760,14 @@ impl App {
     }
 
     pub fn replace_save_file(&mut self) -> Result<()> {
-        if let Some(entry) = self.selected_entry() {
-            if entry.is_file() {
-                if let Some(savefile_path) = &self.games.get_game_unchecked().savefile_path {
-                    std::fs::copy(savefile_path, &entry.path)?;
-                } else {
-                    self.message
-                        .set_warning("No savefile path is set for the game.");
-                }
+        if let Some(entry) = self.selected_entry()
+            && entry.is_file()
+        {
+            if let Some(savefile_path) = &self.games.get_game_unchecked().savefile_path {
+                std::fs::copy(savefile_path, &entry.path)?;
+            } else {
+                self.message
+                    .set_warning("No savefile path is set for the game.");
             }
         }
 
@@ -788,10 +788,10 @@ impl App {
     }
 
     pub fn jump_to_entry(&mut self) {
-        if let Some(idx) = self.fuzzy_finder.selected_idx() {
-            if let Some(picker) = self.fuzzy_finder.picker.take() {
-                picker.jump(idx, self);
-            }
+        if let Some(idx) = self.fuzzy_finder.selected_idx()
+            && let Some(picker) = self.fuzzy_finder.picker.take()
+        {
+            picker.jump(idx, self);
         }
     }
 

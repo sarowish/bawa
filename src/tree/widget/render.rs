@@ -48,15 +48,14 @@ impl StatefulWidget for Tree<'_> {
 
             let is_selected = state.selected.filter(|id| *id == item.id).is_some();
 
-            if state.marked.contains(&item.id) {
-                if let Some(span) = item
+            if state.marked.contains(&item.id)
+                && let Some(span) = item
                     .content
                     .iter_mut()
                     .last()
                     .and_then(|line| line.spans.last_mut())
-                {
-                    span.style = self.marked_style;
-                }
+            {
+                span.style = self.marked_style;
             }
 
             if state.active.filter(|id| *id == item.id).is_some() {

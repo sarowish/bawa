@@ -234,17 +234,17 @@ fn get_entry_path(args: &ArgMatches, app: &mut App) -> Result<Option<PathBuf>> {
 fn select_game_by_idx_or_name(games: &mut Games, args: &ArgMatches) -> Result<()> {
     let mut idx = args.get_one::<usize>("by_index").map(ToOwned::to_owned);
 
-    if idx.is_none() {
-        if let Some(name) = args.get_one::<String>("game_name") {
-            idx = games
-                .inner
-                .items
-                .iter()
-                .position(|game| game.name() == *name);
+    if idx.is_none()
+        && let Some(name) = args.get_one::<String>("game_name")
+    {
+        idx = games
+            .inner
+            .items
+            .iter()
+            .position(|game| game.name() == *name);
 
-            if idx.is_none() {
-                return Err(anyhow::anyhow!("No game with the name \"{}\".", name));
-            }
+        if idx.is_none() {
+            return Err(anyhow::anyhow!("No game with the name \"{}\".", name));
         }
     }
 
@@ -261,16 +261,16 @@ fn select_profile_by_idx_or_name(game: &mut Game, args: &ArgMatches) -> Result<(
     let mut idx = args.get_one::<usize>("by_index").map(ToOwned::to_owned);
     let profiles = &mut game.profiles;
 
-    if idx.is_none() {
-        if let Some(name) = args.get_one::<String>("profile_name") {
-            idx = profiles
-                .items
-                .iter()
-                .position(|profile| profile.name() == *name);
+    if idx.is_none()
+        && let Some(name) = args.get_one::<String>("profile_name")
+    {
+        idx = profiles
+            .items
+            .iter()
+            .position(|profile| profile.name() == *name);
 
-            if idx.is_none() {
-                return Err(anyhow::anyhow!("No profile with the name \"{}\".", name));
-            }
+        if idx.is_none() {
+            return Err(anyhow::anyhow!("No profile with the name \"{}\".", name));
         }
     }
 
