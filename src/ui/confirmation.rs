@@ -4,7 +4,7 @@ use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Layout, Offset, Rect},
     prelude::Buffer,
-    style::{Style, Stylize},
+    style::Style,
     text::{Line, Span},
     widgets::{
         Block, BorderType, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation,
