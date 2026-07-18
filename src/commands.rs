@@ -54,6 +54,7 @@ impl TryFrom<&str> for Command {
             "up_directory" => Command::UpDirectory,
             "jump_to_parent" => Command::JumpToParent,
             "load_save_file" => Command::LoadSaveFile,
+            "load_random_save_file" => Command::LoadRandomSaveFile,
             "load_active_save_file" => Command::LoadActiveSaveFile,
             "mark_save_file" => Command::MarkSaveFile,
             "import_save_file" => Command::ImportSaveFile,
