@@ -93,7 +93,7 @@ pub enum GameSelectionCommand {
     Create,
     Rename,
     Delete,
-    SetSavefile,
+    SetSaveFile,
     Select,
     Abort,
 }
@@ -106,7 +106,7 @@ impl TryFrom<&str> for GameSelectionCommand {
             "create" => GameSelectionCommand::Create,
             "rename" => GameSelectionCommand::Rename,
             "delete" => GameSelectionCommand::Delete,
-            "set_savefile" => GameSelectionCommand::SetSavefile,
+            "set_save_file" => GameSelectionCommand::SetSaveFile,
             "select" => GameSelectionCommand::Select,
             "abort" => GameSelectionCommand::Abort,
             _ => anyhow::bail!("\"{}\" is an invalid command", command),

@@ -146,7 +146,7 @@ impl Default for KeyBindings {
         insert_binding!(game_selection, "r", GameSelectionCommand::Rename);
         insert_binding!(game_selection, "d", GameSelectionCommand::Delete);
         insert_binding!(game_selection, "enter", GameSelectionCommand::Select);
-        insert_binding!(game_selection, "s", GameSelectionCommand::SetSavefile);
+        insert_binding!(game_selection, "s", GameSelectionCommand::SetSaveFile);
         insert_binding!(game_selection, "escape", GameSelectionCommand::Abort);
 
         insert_binding!(profile_selection, "c", ProfileSelectionCommand::Create);

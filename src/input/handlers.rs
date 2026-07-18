@@ -106,7 +106,7 @@ fn handle_key_game_selection_mode(key: KeyEvent, app: &mut App) -> bool {
                 app.prompt_for_confirmation(ConfirmationContext::GameDeletion);
             }
             GameSelectionCommand::Select => app.confirm_game_selection(),
-            GameSelectionCommand::SetSavefile => {
+            GameSelectionCommand::SetSaveFile => {
                 if games.get_selected().is_some() {
                     app.mode = Mode::GameCreation;
                     app.game_creation = CreatingGame::edit_path();
