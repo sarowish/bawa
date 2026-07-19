@@ -252,12 +252,15 @@ impl DerefMut for KeyBindings {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{Config, keys::UserKeyBindings, tests::read_example_config};
+    use crate::config::{Config, MergeConfig, keys::UserKeyBindings, tests::read_example_config};
 
     #[test]
     fn example_up_to_date() {
-        let default = Config::default().key_bindings;
+        let expected = Config::default().key_bindings;
+        let mut actual = Config::default().key_bindings;
         let user_config = read_example_config();
+
+        let user_key_bindings = user_config.key_bindings.unwrap();
 
         let UserKeyBindings {
             general,
@@ -265,14 +268,34 @@ mod tests {
             profile_selection,
             help,
             confirmation,
-        } = user_config.key_bindings.unwrap();
+        } = &user_key_bindings;
 
-        assert!(general.is_some_and(|keys| keys.len() == default.general.len()));
-        assert!(game_selection.is_some_and(|keys| keys.len() == default.game_selection.len()));
         assert!(
-            profile_selection.is_some_and(|keys| keys.len() == default.profile_selection.len())
+            general
+                .as_ref()
+                .is_some_and(|keys| keys.len() == expected.general.len())
         );
-        assert!(help.is_some_and(|keys| keys.len() == default.help.len()));
-        assert!(confirmation.is_some_and(|keys| keys.len() == default.confirmation.len()));
+        assert!(
+            game_selection
+                .as_ref()
+                .is_some_and(|keys| keys.len() == expected.game_selection.len())
+        );
+        assert!(
+            profile_selection
+                .as_ref()
+                .is_some_and(|keys| keys.len() == expected.profile_selection.len())
+        );
+        assert!(
+            help.as_ref()
+                .is_some_and(|keys| keys.len() == expected.help.len())
+        );
+        assert!(
+            confirmation
+                .as_ref()
+                .is_some_and(|keys| keys.len() == expected.confirmation.len())
+        );
+
+        actual.merge(user_key_bindings).unwrap();
+        assert_eq!(actual, expected);
     }
 }
