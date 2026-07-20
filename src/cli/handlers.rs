@@ -11,7 +11,7 @@ use clap::{ArgMatches, parser::ValueSource};
 use crossterm::style::Stylize;
 use std::path::PathBuf;
 
-pub fn handle_subcommands(app: &mut App) -> bool {
+pub fn handle_subcommands(app: &mut App) -> Result<bool> {
     let res = match CLAP_ARGS.subcommand() {
         Some(("list", args)) => handle_list_subcommand(app, args),
         Some(("load", args)) => handle_load_subcommand(app, args),
@@ -20,14 +20,11 @@ pub fn handle_subcommands(app: &mut App) -> bool {
         Some(("delete", args)) => handle_delete_subcommand(app, args),
         Some(("game", args)) => handle_game_subcommand(app, args),
         Some(("profile", args)) => handle_profile_subcommand(app, args),
-        _ => return false,
+        _ => return Ok(false),
     };
 
-    if let Err(e) = res {
-        eprintln!("{e:?}");
-    }
-
-    true
+    res?;
+    Ok(true)
 }
 
 pub fn handle_list_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()> {
@@ -67,7 +64,7 @@ pub fn handle_load_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     } else if args.get_flag("random") {
         app.load_random_save_file();
     } else {
-        std::process::exit(1)
+        anyhow::bail!("No save file was selected.");
     }
 
     if !app.message.is_empty() {
@@ -95,7 +92,7 @@ fn handle_rename_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
 
         utils::rename(&entry_path, &new_path)?;
     } else {
-        std::process::exit(1)
+        anyhow::bail!("No save file was selected.");
     }
 
     Ok(())
@@ -109,7 +106,7 @@ fn handle_delete_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
             .context("There is no such entry.")?;
         entries[id].delete()?;
     } else {
-        std::process::exit(1)
+        anyhow::bail!("No save file was selected.");
     }
 
     Ok(())

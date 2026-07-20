@@ -7,7 +7,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut app = app::App::new()?;
 
-    if cli::handle_subcommands(&mut app) {
+    if cli::handle_subcommands(&mut app)? {
         return Ok(());
     }
 
