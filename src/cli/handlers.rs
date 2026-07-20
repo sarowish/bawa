@@ -57,19 +57,17 @@ pub fn handle_list_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()> {
 }
 
 pub fn handle_load_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
-    if let Some(path) = get_entry_path(args, app)? {
-        app.load_save_file(&path, true)?;
+    let path = if let Some(path) = get_entry_path(args, app)? {
+        app.load_save_file(&path, true)?
     } else if !any_args(args) {
-        app.load_active_save_file();
+        app.load_active_save_file()?
     } else if args.get_flag("random") {
-        app.load_random_save_file();
+        app.load_random_save_file()?
     } else {
         anyhow::bail!("No save file was selected.");
-    }
+    };
 
-    if !app.message.is_empty() {
-        println!("{}", *app.message);
-    }
+    println!("Loaded {path}");
 
     Ok(())
 }
@@ -80,7 +78,7 @@ pub fn handle_import_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()>
         .context("No game is selected.")?
         .active_profile
         .context("No profile is selected.")?;
-    app.import_save_file(true);
+    app.import_save_file(true)?;
     Ok(())
 }
 
@@ -245,8 +243,12 @@ fn select_game_by_idx_or_name(games: &mut Games, args: &ArgMatches) -> Result<()
         }
     }
 
-    if idx.is_some() {
-        games.inner.state.select(idx);
+    if let Some(idx) = idx {
+        anyhow::ensure!(
+            idx < games.inner.items.len(),
+            "Game index {idx} is out of range."
+        );
+        games.inner.state.select(Some(idx));
     } else {
         games.inner.state.select(games.active_game);
     }
@@ -271,8 +273,12 @@ fn select_profile_by_idx_or_name(game: &mut Game, args: &ArgMatches) -> Result<(
         }
     }
 
-    if idx.is_some() {
-        profiles.state.select(idx);
+    if let Some(idx) = idx {
+        anyhow::ensure!(
+            idx < profiles.items.len(),
+            "Profile index {idx} is out of range."
+        );
+        profiles.state.select(Some(idx));
     } else {
         profiles.state.select(game.active_profile);
     }

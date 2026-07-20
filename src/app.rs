@@ -25,12 +25,34 @@ use crate::{
         Context as EventContext, FileSystemEvent, HandleFileSystemEvent, Kind as EventKind, Watcher,
     },
 };
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
 use ratatui::widgets::ListState;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedReceiver};
+
+#[derive(Debug, Error)]
+pub enum SaveFileError {
+    #[error("no profile is selected")]
+    MissingProfile,
+
+    #[error("no save file path is configured")]
+    MissingSaveFilePath,
+
+    #[error("no active save file exists for the selected profile")]
+    MissingActiveSaveFile,
+
+    #[error("the selected profile contains no save files")]
+    NoSaveFiles,
+
+    #[error("failed to copy save file: {0}")]
+    Copy(#[from] std::io::Error),
+
+    #[error("failed to update the active save file: {0}")]
+    UpdateActive(#[from] anyhow::Error),
+}
 
 pub struct App {
     pub games: Games,
@@ -662,27 +684,49 @@ impl App {
         }
     }
 
-    pub fn load_save_file(&mut self, path: &Path, mark_as_active: bool) -> Result<()> {
-        let game = self.games.get_game_unchecked_mut();
-        let Some(savefile_path) = &game.savefile_path else {
-            self.message
-                .set_warning("No savefile path is set for the game.");
-            return Ok(());
-        };
+    pub fn show_load_result(&mut self, result: Result<String, SaveFileError>) {
+        match result {
+            Ok(path) => {
+                self.message
+                    .set_message_with_timeout(&format!("Loaded {path}"), 5);
+            }
+            Err(error)
+                if matches!(
+                    &error,
+                    SaveFileError::MissingSaveFilePath
+                        | SaveFileError::MissingActiveSaveFile
+                        | SaveFileError::NoSaveFiles
+                ) =>
+            {
+                self.message.set_warning(&error.to_string());
+            }
+            Err(error) => {
+                self.message.set_error_from_str(&error.to_string());
+            }
+        }
+    }
 
-        std::fs::copy(path, savefile_path).context("couldn't load save file")?;
+    pub fn load_save_file(
+        &mut self,
+        path: &Path,
+        mark_as_active: bool,
+    ) -> Result<String, SaveFileError> {
+        let game = self.games.get_game_unchecked_mut();
+        let save_file_path = game
+            .savefile_path
+            .as_ref()
+            .ok_or(SaveFileError::MissingSaveFilePath)?;
+
+        std::fs::copy(path, save_file_path)?;
 
         let profile = game.get_profile_mut().unwrap();
-
-        self.message
-            .set_message_with_timeout(&format!("Loaded {}", profile.rel_path_to(path)), 5);
 
         if mark_as_active {
             profile.update_active_save_file(path)?;
             self.tree_state.active = self.tree_state.selected;
         }
 
-        Ok(())
+        Ok(profile.rel_path_to(path))
     }
 
     pub fn load_selected_save_file(&mut self) {
@@ -690,13 +734,14 @@ impl App {
             && entry.is_file()
         {
             let path = entry.path.clone();
-            set_msg_if_error!(self.message, self.load_save_file(&path, true));
+            let result = self.load_save_file(&path, true);
+            self.show_load_result(result);
         }
     }
 
-    pub fn load_random_save_file(&mut self) {
+    pub fn load_random_save_file(&mut self) -> Result<String, SaveFileError> {
         let Some(entries) = self.games.get_entries_mut() else {
-            return;
+            return Err(SaveFileError::MissingProfile);
         };
 
         let save_files = entries
@@ -704,23 +749,27 @@ impl App {
             .filter(|id| !entries.detached_from_root(*id) && entries[*id].is_file())
             .collect::<Vec<NodeId>>();
 
-        let id = fastrand::choice(save_files);
-        self.tree_state.select(id, entries);
+        let id = fastrand::choice(save_files).ok_or(SaveFileError::NoSaveFiles)?;
+        self.tree_state.select(Some(id), entries);
 
-        if let Some(entries) = self.games.get_entries()
-            && let Some(entry) = id.map(|id| &entries[id])
-        {
-            set_msg_if_error!(self.message, self.load_save_file(&entry.path.clone(), true));
-        }
+        let entries = self
+            .games
+            .get_entries()
+            .ok_or(SaveFileError::MissingProfile)?;
+        let path = entries[id].path.clone();
+
+        self.load_save_file(&path, true)
     }
 
-    pub fn load_active_save_file(&mut self) {
-        if let Some(path) = self.games.get_profile().unwrap().get_active_save_file() {
-            set_msg_if_error!(self.message, self.load_save_file(&path, false));
-        } else {
-            self.message
-                .set_warning("No active save file exists for the selected profile.");
-        }
+    pub fn load_active_save_file(&mut self) -> Result<String, SaveFileError> {
+        let path = self
+            .games
+            .get_profile()
+            .ok_or(SaveFileError::MissingProfile)?
+            .get_active_save_file()
+            .ok_or(SaveFileError::MissingActiveSaveFile)?;
+
+        self.load_save_file(&path, false)
     }
 
     pub fn mark_selected_save_file(&mut self) {
@@ -741,22 +790,22 @@ impl App {
         }
     }
 
-    pub fn import_save_file(&mut self, top_level: bool) {
-        let Some(savefile_path) = self.games.get_game_unchecked().savefile_path.clone() else {
-            self.message
-                .set_warning("No savefile path is set for the game.");
-            return;
-        };
+    pub fn import_save_file(&mut self, top_level: bool) -> Result<(), SaveFileError> {
+        let savefile_path = self
+            .games
+            .get_game_unchecked()
+            .savefile_path
+            .clone()
+            .ok_or(SaveFileError::MissingSaveFilePath)?;
 
         let node = self.context_node(top_level);
         let mut path = node.path.join(savefile_path.file_name().unwrap());
         utils::validate_name(&mut path);
 
-        if let Err(e) = std::fs::copy(&savefile_path, &path) {
-            self.message.set_error(&e.into());
-        } else {
-            node.expanded = Some(true);
-        }
+        std::fs::copy(&savefile_path, &path)?;
+        node.expanded = Some(true);
+
+        Ok(())
     }
 
     pub fn replace_save_file(&mut self) -> Result<()> {

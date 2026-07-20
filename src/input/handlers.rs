@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use super::{Input, Mode};
 use crate::{
-    app::{App, StatefulList},
+    app::{App, SaveFileError, StatefulList},
     commands::{
         Command, ConfirmationCommand, GameSelectionCommand, HelpCommand, ProfileSelectionCommand,
     },
@@ -53,11 +53,25 @@ fn handle_key_normal_mode(key: KeyEvent, app: &mut App) -> bool {
             Command::UpDirectory => app.up_directory(),
             Command::JumpToParent => app.jump_to_parent(),
             Command::LoadSaveFile => app.load_selected_save_file(),
-            Command::LoadRandomSaveFile => app.load_random_save_file(),
-            Command::LoadActiveSaveFile => app.load_active_save_file(),
+            Command::LoadRandomSaveFile => {
+                let result = app.load_random_save_file();
+                app.show_load_result(result);
+            }
+            Command::LoadActiveSaveFile => {
+                let result = app.load_active_save_file();
+                app.show_load_result(result);
+            }
             Command::MarkSaveFile => app.mark_selected_save_file(),
-            Command::ImportSaveFile => app.import_save_file(false),
-            Command::ImportSaveFileTopLevel => app.import_save_file(true),
+            Command::ImportSaveFile | Command::ImportSaveFileTopLevel => {
+                let top_level = *command != Command::ImportSaveFile;
+                let result = app.import_save_file(top_level);
+
+                if let Err(error @ SaveFileError::MissingSaveFilePath) = result {
+                    app.message.set_warning(&error.to_string());
+                } else if let Err(error) = result {
+                    app.message.set_error(&error.into());
+                }
+            }
             Command::ReplaceSaveFile => app.prompt_for_confirmation(ConfirmationContext::Replacing),
             Command::DeleteFile => app.prompt_for_confirmation(ConfirmationContext::Deletion),
             Command::CreateFolder => app.take_input(Mode::FolderCreation(false)),
