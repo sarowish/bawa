@@ -104,10 +104,7 @@ impl Game {
     }
 
     pub fn create_profile(&mut self, name: &str) -> Result<()> {
-        if name.is_empty() {
-            return Err(anyhow::anyhow!("Name can't be empty."));
-        }
-
+        utils::validate_name(name)?;
         let path = self.path.join(name);
         utils::check_for_dup(&path)?;
         std::fs::create_dir(&path)?;
@@ -118,9 +115,7 @@ impl Game {
     }
 
     pub fn rename_selected_profile(&self, new_name: &str) -> Result<()> {
-        if new_name.is_empty() {
-            return Err(anyhow::anyhow!("Name can't be empty."));
-        }
+        utils::validate_name(new_name)?;
 
         if let Some(profile) = self.profiles.get_selected() {
             let mut new_path = profile.path.clone();
@@ -267,9 +262,7 @@ impl Games {
     }
 
     pub fn create_game(&mut self, name: &str, savefile_path: &Path) -> Result<()> {
-        if name.is_empty() {
-            return Err(anyhow::anyhow!("Name can't be empty."));
-        }
+        utils::validate_name(name)?;
 
         let path = utils::get_state_dir()?.join(name);
         utils::check_for_dup(&path)?;
@@ -285,9 +278,7 @@ impl Games {
     }
 
     pub fn rename_selected_game(&mut self, new_name: &str) -> Result<()> {
-        if new_name.is_empty() {
-            return Err(anyhow::anyhow!("Name can't be empty."));
-        }
+        utils::validate_name(new_name)?;
 
         if let Some(game) = self.inner.get_selected() {
             let mut new_path = game.path.clone();

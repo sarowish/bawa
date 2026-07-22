@@ -25,7 +25,7 @@ use crate::{
         Context as EventContext, FileSystemEvent, HandleFileSystemEvent, Kind as EventKind, Watcher,
     },
 };
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use crossterm::event::{Event as CrosstermEvent, EventStream};
 use futures::StreamExt;
 use ratatui::widgets::ListState;
@@ -392,7 +392,7 @@ impl App {
 
     pub fn create_folder(&mut self, top_level: bool) -> Result<()> {
         let file_name = self.extract_input();
-        ensure!(!file_name.is_empty(), "Name can't be empty.");
+        utils::validate_name(&file_name)?;
         let node = self.context_node(top_level);
         let path = node.path.join(file_name);
         utils::check_for_dup(&path)?;
@@ -439,10 +439,7 @@ impl App {
 
     pub fn rename_selected_entry(&mut self) -> Result<()> {
         let new_name = self.extract_input();
-
-        if new_name.is_empty() {
-            return Err(anyhow::anyhow!("Name can't be empty."));
-        }
+        utils::validate_name(&new_name)?;
 
         let entry = self.selected_entry().unwrap();
         let old_path = &entry.path;
@@ -800,7 +797,7 @@ impl App {
 
         let node = self.context_node(top_level);
         let mut path = node.path.join(savefile_path.file_name().unwrap());
-        utils::validate_name(&mut path);
+        utils::make_path_unique(&mut path);
 
         std::fs::copy(&savefile_path, &path)?;
         node.expanded = Some(true);

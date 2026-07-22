@@ -1,8 +1,8 @@
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use std::{
     fs,
     io::Write,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
@@ -35,7 +35,7 @@ pub fn get_config_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn validate_name(path: &mut PathBuf) {
+pub fn make_path_unique(path: &mut PathBuf) {
     while path.exists() {
         path.set_file_name(format!(
             "{} (dup){}",
@@ -44,6 +44,34 @@ pub fn validate_name(path: &mut PathBuf) {
                 .map_or(String::new(), |ext| format!(".{}", ext.to_string_lossy()))
         ));
     }
+}
+
+pub fn join_relative_path(base: &Path, relative: &str) -> Result<PathBuf> {
+    let relative = Path::new(relative);
+    let mut components = relative.components();
+
+    ensure!(
+        matches!(components.next(), Some(Component::Normal(_)))
+            && components.all(|component| matches!(component, Component::Normal(_))),
+        "Invalid relative path."
+    );
+
+    Ok(base.join(relative))
+}
+
+pub fn validate_name(name: &str) -> Result<()> {
+    let mut components = Path::new(name).components();
+
+    let Some(component) = components.next() else {
+        bail!("Name can't be empty.");
+    };
+
+    ensure!(
+        matches!(component, Component::Normal(_)) && components.next().is_none(),
+        "Name must be a single normal path component."
+    );
+
+    Ok(())
 }
 
 pub fn check_for_dup(path: &Path) -> Result<()> {

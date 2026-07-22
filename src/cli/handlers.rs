@@ -85,6 +85,7 @@ pub fn handle_import_subcommand(app: &mut App, _args: &ArgMatches) -> Result<()>
 fn handle_rename_subcommand(app: &mut App, args: &ArgMatches) -> Result<()> {
     if let Some(entry_path) = get_entry_path(args, app)? {
         let new_name = args.get_one::<String>("new_name").unwrap();
+        utils::validate_name(new_name)?;
         let mut new_path = entry_path.clone();
         new_path.set_file_name(new_name);
 
@@ -223,7 +224,9 @@ fn get_entry_path(args: &ArgMatches, app: &mut App) -> Result<Option<PathBuf>> {
         relative_path = app.fuzzy_finder.run_inline()?;
     }
 
-    Ok(relative_path.map(|rel_path| profile.abs_path_to(rel_path)))
+    relative_path
+        .map(|rel_path| utils::join_relative_path(&profile.path, rel_path))
+        .transpose()
 }
 
 fn select_game_by_idx_or_name(games: &mut Games, args: &ArgMatches) -> Result<()> {
